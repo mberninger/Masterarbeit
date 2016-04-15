@@ -1,5 +1,5 @@
 %% Hier möchte ich den Kalman-Filter anwenden, um die Volatilitätsflächen zu bestimmen.
-
+%TestTestTest
 %% Find vAll, the difference between estimated vola and implied vola for every datapoint:
 laenge = 0;
 s = zeros(1907,1);
