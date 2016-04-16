@@ -3,21 +3,30 @@ clear all;
 clc;
 close all;
 
-%% Lade Dax-Optionsdaten
+%% load Dax-optiondata
 load data;
 
-%% Zun�chst werden die Daten gefiltered, in Calls und Puts aufgeteilt und die impliziete Volatilit�t sowie die Moneyness berechnet und hinzugef�gt
+%% split data up in calls and puts, evaluate and add implied volatilities, filter the data and evaluate and add the moneyness
 
-% NOTE: specify filtering values outside of function as structure
+% filtering values:
+% 1: check upper and lower bounds of option prices:
+        % upper bound call: p (option price) < s_t (underlying)
+        % upper bound put: p < k (strike price) * exp(-r (interest rate)* t (time to maturity))
+        % lower bound call: max(s_t-k*exp(-rt),0) < p
+        % lower bound put: max(k*exp(-rt)-s_t,0) < p
+% 2: check for negative time values and remove them
+% 3: check time to maturity, it should be between 20 and 510 days
+% 4: evaluate and check moneyness, it should be between 0.8 and 1.2 
+% 5: check option price, it should be bigger than 5
+% 6: check implied volatilities, it should be between 5 and 50 percent
 
 filteredDataCall = getFilteredDataCall(data);
 filteredDataPut = getFilteredDataPut(data);
 
 
-
-%% Nun soll die implizite Volatilit�t modelliert werden
+%% model implied volatilities for call options
 %
-%% Ermittle Anzahl der Daten pro Tag
+%% evaluate the row number where day changes
 
 % NOTE: function only works if dates are really sorted
 filteredDataCall = sortrows(filteredDataCall, 'Date');
@@ -39,14 +48,14 @@ uniqueDates = unique(filteredDataCall.Date);
 % attach value of (last index + 1) to dates
 dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
 
-%% Koeffizienten f�r Modell finden; verwendetes Modell: implied volatility = a + b*Moneyness + c*Moneyness^2 + d*TimeToMaturity + e*Moneyness*TimeToMaturity
+%% find coefficients for model; used modell: implied volatility = a + b*moneyness + c*moneyness^2 + d*timeToMaturity + e*moneyness*timeToMaturity
 nDates = size(uniqueDates, 1);
 coeff = zeros(5, nDates);
 for ii = 1:nDates
-%       Moneyness = filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1);
-%       Moneyness_2 = Moneyness.^2;
+%       moneyness = filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1);
+%       moneyness_2 = moneyness.^2;
 %       time = filteredDataCall.TimeToMaturity(dataPerDay(i):dataPerDay(i+1)-1);
-%       Data_Money = [Moneyness, Moneyness_2, time, time.*Moneyness];
+%       data_money = [moneyness, moneyness_2, time, time.*moneyness];
 %       iVol = filteredDataCall.implVol(dataPerDay(i):dataPerDay(i+1)-1);
 
     % get all observations for current day
@@ -65,13 +74,14 @@ end
 clear ii;
 coeff = coeff.';
 
-%%
-
+%% plot coefficients of model
 plot(uniqueDates, coeff)
 grid on
 grid minor
 datetick 'x'
-% TODO: attach labels (legend?) to coefficients
+legend('a','b','c','d','e')
+title('Model coefficients')
+% TODO: find suitable names for coefficients
 
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real
