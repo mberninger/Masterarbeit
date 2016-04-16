@@ -6,33 +6,99 @@ close all;
 %% Lade Dax-Optionsdaten
 load data;
 
-%% Zunächst werden die Daten gefiltered, in Calls und Puts aufgeteilt und die impliziete Volatilität sowie die Moneyness berechnet und hinzugefügt
+%% Zunï¿½chst werden die Daten gefiltered, in Calls und Puts aufgeteilt und die impliziete Volatilitï¿½t sowie die Moneyness berechnet und hinzugefï¿½gt
+
+% NOTE: specify filtering values outside of function as structure
+
 filteredDataCall = getFilteredDataCall(data);
 filteredDataPut = getFilteredDataPut(data);
 
 
 
-%% Nun soll die implizite Volatilität modelliert werden
+%% Nun soll die implizite Volatilitï¿½t modelliert werden
 %
 %% Ermittle Anzahl der Daten pro Tag
-dataPerDay = getDiffDays(filteredDataCall.Date);
 
-%% Koeffizienten für Modell finden; verwendetes Modell: implied volatility = a + b*Moneyness + c*Moneyness^2 + d*TimeToMaturity + e*Moneyness*TimeToMaturity
-coeff = zeros(5,1907);
-for i = 1:1907
+% NOTE: function only works if dates are really sorted
+filteredDataCall = sortrows(filteredDataCall, 'Date');
+
+dataPerDay2 = getDiffDays(filteredDataCall.Date);
+
+%% find date changes
+
+dateChange = filteredDataCall.Date(1:end-1) ~= filteredDataCall.Date(2:end);
+dateChange = [true; dateChange];
+dataPerDay = find(dateChange);
+
+assert(all(dataPerDay == dataPerDay2))
+
+% get unique dates
+uniqueDates = unique(filteredDataCall.Date);
+
+% NOTE: old implementation skips observations for last date
+% attach value of (last index + 1) to dates
+dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
+
+%% Koeffizienten fï¿½r Modell finden; verwendetes Modell: implied volatility = a + b*Moneyness + c*Moneyness^2 + d*TimeToMaturity + e*Moneyness*TimeToMaturity
+nDates = size(uniqueDates, 1);
+coeff = zeros(5, nDates);
+for ii = 1:nDates
 %       Moneyness = filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1);
 %       Moneyness_2 = Moneyness.^2;
 %       time = filteredDataCall.TimeToMaturity(dataPerDay(i):dataPerDay(i+1)-1);
 %       Data_Money = [Moneyness, Moneyness_2, time, time.*Moneyness];
 %       iVol = filteredDataCall.implVol(dataPerDay(i):dataPerDay(i+1)-1);
-      
-    mdl = LinearModel.fit([filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1), filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1).^2, filteredDataCall.TimeToMaturity(dataPerDay(i):dataPerDay(i+1)-1), filteredDataCall.TimeToMaturity(dataPerDay(i):dataPerDay(i+1)-1).*filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1)],filteredDataCall.implVol(dataPerDay(i):dataPerDay(i+1)-1));
-    coeff(:,i) = table2array(mdl.Coefficients(:,1));
+
+    % get all observations for current day
+    thisObs = filteredDataCall(dayChanges(ii):dayChanges(ii+1)-1, :);
+    
+    % get design matrix
+    Xmatrix = [thisObs.Moneyness, thisObs.Moneyness.^2, ...
+        thisObs.TimeToMaturity, ...
+        thisObs.TimeToMaturity .* thisObs.Moneyness];
+    
+    % fit model and extract coefficients
+    mdl = LinearModel.fit(Xmatrix, thisObs.implVol);
+    coeff(:,ii) = table2array(mdl.Coefficients(:,1));
+
 end
-clear i;
+clear ii;
 coeff = coeff.';
 
-%% Vektor für Anzahl der Tage ermitteln
+%%
+
+plot(uniqueDates, coeff)
+grid on
+grid minor
+datetick 'x'
+% TODO: attach labels (legend?) to coefficients
+
+%% TODO: next steps
+% - goodness-of-fit: how good does estimated smooth surface describe real
+% implied volatilities?
+% - are all explanatory variables required, or could a more sparse model
+% (e.g. moneyness and maturity only) provide a better solution?
+% NOTE: adding explanatory variables does always increase IN-SAMPLE fit.
+% But more sparse models can be better OUT-OF-SAMPLE
+% - conduct out-of-sample forecast for real future option prices with
+% given estimated models
+% - create function to plot smooth surface for given coefficients (find
+% meaningful ranges for x and y values (moneyness, maturity)
+% - plot smooth surface vs implied volatility observations
+% - make plot variables with regards to parameters: estimated volatility
+% surfaces of different models should be comparable
+% - how sensitive are all results with regards to chosen data filtering?
+% - some descriptive statistics: 
+%   - observations per day
+%   - observed maturities per day
+%   - number of filtered observations
+%   - ...
+% - visualize dependency between estimated coefficients: 
+%   - are they independent?
+%   - is it reasonable to model them in 5 separate univariate AR models, or
+%     do we need a 5-dimensional joint model
+
+%% Vektor fï¿½r Anzahl der Tage ermitteln
 tag = ones(1907,1); 
 for i = 2:1907
     tag(i) = tag(i-1)+1;
@@ -54,10 +120,10 @@ ARCoeff4 = estimate(model, coeff(:,4));
 % 5. Koeffizient:
 ARCoeff5 = estimate(model, coeff(:,5));
 
-%% ***Hier könnte der Kalman Filter eingesetzt werden???
+%% ***Hier kï¿½nnte der Kalman Filter eingesetzt werden???
 
 
-%% Statt dem Kalman Filter wird hier ein AR Modell verwendet um die implizite Volatilitätsfläche über die Zeit zu betrachten
+%% Statt dem Kalman Filter wird hier ein AR Modell verwendet um die implizite Volatilitï¿½tsflï¿½che ï¿½ber die Zeit zu betrachten
 rng default; % for reproducability
 % 1.Koeffizient
 sim1 = simulate(ARCoeff1,1900,'NumPaths',1000,'Y0',coeff(:,1));

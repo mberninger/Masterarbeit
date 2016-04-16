@@ -5,48 +5,61 @@ function [ filteredDataCall ] = getFilteredDataCall( data )
 %% Tabelle aufteilen in Call Optionen
 dataCall = data(data.IsCall == 1, :);
 
-%% Impliziete Volatilitäten ermitteln/laden
+%% Impliziete Volatilitï¿½ten ermitteln/laden
 load impliedVolaCall
 
 % implVolCall = blsimpv(dataCall.DAX,dataCall.Strike,dataCall.EONIAmatched,dataCall.TimeToMaturity,dataCall.OptionPrice,[],[],[],{'Call'});
 
-%% Zusammenfassung der Daten und der impliziten Volatilitäten zu einer Tabelle
-varName = {'Date'; 'OptionPrice'; 'Bid'; 'Ask'; 'Volume'; 'OpenInterest'; 'Strike'; 'Expiry'; 'DAX'; 'EONIAmatched'; 'TimeToMaturity'; 'IsCall';'implVol'};
-dataCall = table( dataCall.Date, dataCall.OptionPrice, dataCall.Bid, dataCall.Ask, dataCall.Volume, dataCall.OpenInterest, dataCall.Strike, dataCall.Expiry, dataCall.DAX, dataCall.EONIAmatched, dataCall.TimeToMaturity, dataCall.IsCall, implVolCall, 'VariableNames', varName);
+%% Zusammenfassung der Daten und der impliziten Volatilitï¿½ten zu einer Tabelle
 
-%% Zunächst werden die Daten gefiltert
+dataCall.implVol = implVolCall;
 
-%% 1. Schritt: Ober- und Untergrenze von Optionspreisen überprüfen, um Arbitragemöglichkeiten zu vermeiden
+%% Zunï¿½chst werden die Daten gefiltert
+
+%% 1. Schritt: Ober- und Untergrenze von Optionspreisen ï¿½berprï¿½fen, um Arbitragemï¿½glichkeiten zu vermeiden
 % Obergrenze Call: P (Optionspreis) < S_t (Wert des Underlyings)
-dataCallObergrenze = dataCall(dataCall.OptionPrice > dataCall.DAX, : );
+callUpperBounds = dataCall.DAX;
 % Untergrenze Call: max(S_t-K*e^(-rT),0) < P
-dataCallUntergrenze = dataCall(dataCall.OptionPrice < max((dataCall.DAX - (dataCall.Strike .* exp(-dataCall.EONIAmatched .* dataCall.TimeToMaturity))),0), : );
+discountFactor = exp(-dataCall.EONIAmatched .* dataCall.TimeToMaturity);
+callLowerBounds = max((dataCall.DAX - (dataCall.Strike .* discountFactor)), 0);
+
+% store messy observations
+dataCallObergrenze = dataCall(dataCall.OptionPrice > callUpperBounds, :);
+dataCallUntergrenze = dataCall(dataCall.OptionPrice < callLowerBounds, :);
 
 % Entfernen der Wertober- und Wertuntergrenzenfehler aus Datensatz
-dataCallFiltered = dataCall(dataCall.OptionPrice > max((dataCall.DAX - (dataCall.Strike .* exp(-dataCall.EONIAmatched .* dataCall.TimeToMaturity))),0), : );
+validArbitrageInds = callLowerBounds < dataCall.OptionPrice & ...
+    dataCall.OptionPrice < callUpperBounds ;
 
-%% 2. Schritt: negative Zeitwerte ermitteln und aus dem Datensatz entfernen (je näher Option am Verfallstermin, desto näher an Null, aber niemals negativ)
-dataCallFiltered2 = dataCallFiltered(dataCallFiltered.OptionPrice - max((dataCallFiltered.DAX - dataCallFiltered.Strike), 0) > 0, : );
+%% 2. Schritt: negative Zeitwerte ermitteln und aus dem Datensatz entfernen (je nï¿½her Option am Verfallstermin, desto nï¿½her an Null, aber niemals negativ)
+
+intrinsicVal = max((dataCall.DAX - dataCall.Strike), 0);
+timeVal = dataCall.OptionPrice - intrinsicVal;
+validTimeValInds = timeVal > 0;
 
 %% 3. Schritt: weitere Filter:
 % nicht weniger als 20 Tage und nicht mehr als 510 Tage bis zur Maturity
-dataCallFiltered3 = dataCallFiltered2((dataCallFiltered2.TimeToMaturity .* 255) <= 510 , : );
-dataCallFiltered3 = dataCallFiltered3((dataCallFiltered3.TimeToMaturity .* 255) >= 20 , : );
+maturityInDays = dataCall.TimeToMaturity .* 255;
+validMaturityInds = 20 <= maturityInDays & maturityInDays <= 510;
 
-% Moneyness nicht unter 0.8 und nicht über 1.2 
-dataCallFiltered4 = dataCallFiltered3((dataCallFiltered3.Strike ./ dataCallFiltered3.DAX) <= 1.2, : );
-dataCallFiltered4 = dataCallFiltered4((dataCallFiltered4.Strike ./ dataCallFiltered4.DAX) >= 0.8, : );
+% Moneyness nicht unter 0.8 und nicht ï¿½ber 1.2 
+mnyNess = dataCall.Strike ./ dataCall.DAX;
+validMnyNessInds = 0.8 <= mnyNess & mnyNess <= 1.2;
 
 % Optionspreis nicht unter 5
-dataCallFiltered5 = dataCallFiltered4(dataCallFiltered4.OptionPrice >= 5, : );
+validPriceInds = dataCall.OptionPrice >= 5;
 
-%% 4. Schritt: Implied Vola nicht unter 5 und nicht über 50 Prozent
-dataCallFiltered6 = dataCallFiltered5(dataCallFiltered5.implVol >= 0.05, : );
-dataCallFiltered6 = dataCallFiltered6(dataCallFiltered6.implVol <= 0.5, : );
+%% 4. Schritt: Implied Vola nicht unter 5 und nicht ï¿½ber 50 Prozent
+validImplVolaInds = 0.05 <= dataCall.implVol & dataCall.implVol <= 0.5;
 
 %% Zuletzt wird die Tabelle um die Moneyness erweitert
-varName14 = {'Date'; 'OptionPrice'; 'Bid'; 'Ask'; 'Volume'; 'OpenInterest'; 'Strike'; 'Expiry'; 'DAX'; 'EONIAmatched'; 'TimeToMaturity'; 'IsCall'; 'implVol'; 'Moneyness'};
-filteredDataCall = table(dataCallFiltered6.Date, dataCallFiltered6.OptionPrice, dataCallFiltered6.Bid, dataCallFiltered6.Ask, dataCallFiltered6.Volume, dataCallFiltered6.OpenInterest, dataCallFiltered6.Strike, dataCallFiltered6.Expiry, dataCallFiltered6.DAX, dataCallFiltered6.EONIAmatched, dataCallFiltered6.TimeToMaturity, dataCallFiltered6.IsCall, dataCallFiltered6.implVol, dataCallFiltered6.Strike ./ dataCallFiltered6.DAX, 'VariableNames', varName14);
+dataCall.Moneyness = mnyNess;
+
+% apply all filters
+validInds = validArbitrageInds & validTimeValInds & validMaturityInds & ...
+    validMnyNessInds & validPriceInds & validImplVolaInds;
+
+filteredDataCall = dataCall(validInds, :);
 
 end
 
