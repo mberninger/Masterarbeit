@@ -83,18 +83,64 @@ legend('a','b','c','d','e')
 title('Model coefficients')
 % TODO: find suitable names for coefficients
 
+%% Goodness-of-fit:
+% for examaple: Rsquared-test: (1 = perfect fit)
+gnOfFit1 = mdl.Rsquared.Ordinary;
+gnOfFit2 = mdl.Rsquared.Adjusted;
+
+% other goodness-of-fit test:   
+%       mean square error: 'MSE' (0 = perfect fit)
+%       normalized root mean square error: 'NRMSE' (1 = perfect fit)
+%       normalized mean square error: 'NMSE' (1 = perfect fit)
+
+% vola = getModelledVola(filteredDataCall, coeff, dataPerDay);
+
+load vola;
+gnOfFit3 = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
+gnOfFit4 = goodnessOfFit(vola,filteredDataCall.implVol,'NRMSE');
+gnOfFit5 = goodnessOfFit(vola,filteredDataCall.implVol,'NMSE');
+
+
+
+%% plot volatility surface with estimated coefficients
+% choose in k the day
+% the boundarys for the moneyness and the time to maturity are the same as
+% chosen for filtering the data, so
+    % 0.8 < moneyness < 1.2
+    % 20 < timeToMaturity .*225 < 510
+k = 1123;
+[X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
+Z = coeff(k,1) + coeff(k,2) .* X + coeff(k,3) .* X.^2 + coeff(k,4) .* Y + coeff(k,5) .* X .* Y;
+figure
+surface(X,Y,Z)
+view(3)
+
+hold on;
+scatter3(filteredDataCall.Moneyness(dataPerDay(k):dataPerDay(k+1)-1),filteredDataCall.TimeToMaturity(dataPerDay(k):dataPerDay(k+1)-1),filteredDataCall.implVol(dataPerDay(k):dataPerDay(k+1)-1));
+xlabel('Moneyness');
+ylabel('Time to Maturity');
+zlabel('implied Volatility');
+
+
+
+
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real
 % implied volatilities?
+            % still ToDo: out-of-sample goodness-of-fit
+
 % - are all explanatory variables required, or could a more sparse model
 % (e.g. moneyness and maturity only) provide a better solution?
 % NOTE: adding explanatory variables does always increase IN-SAMPLE fit.
 % But more sparse models can be better OUT-OF-SAMPLE
 % - conduct out-of-sample forecast for real future option prices with
 % given estimated models
+
 % - create function to plot smooth surface for given coefficients (find
-% meaningful ranges for x and y values (moneyness, maturity)
+% meaningful ranges for x and y values (moneyness, maturity) 
+            % => done
 % - plot smooth surface vs implied volatility observations
+            % => done
 % - make plot variables with regards to parameters: estimated volatility
 % surfaces of different models should be comparable
 % - how sensitive are all results with regards to chosen data filtering?
