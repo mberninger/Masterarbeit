@@ -143,52 +143,84 @@ zlabel('implied Volatility');
             % => done
 % - make plot variables with regards to parameters: estimated volatility
 % surfaces of different models should be comparable
+
 % - how sensitive are all results with regards to chosen data filtering?
 % - some descriptive statistics: 
 %   - observations per day
 %   - observed maturities per day
 %   - number of filtered observations
 %   - ...
+
 % - visualize dependency between estimated coefficients: 
 %   - are they independent?
 %   - is it reasonable to model them in 5 separate univariate AR models, or
 %     do we need a 5-dimensional joint model
 
+%% dependency of estimated coefficients
+depOfCoeff = corr(coeff);
+
+
+%% fit VAR model
+Spec = vgxset('n',5,'nAR',1, 'Constant',true);
+EstSpec = vgxvarx(Spec,coeff);
+% simulate coeff for 100 obs
+H = vgxsim(EstSpec,100);
+
+%% plot simulated coefficients of model
+plot(1:100, H)
+grid on
+grid minor
+datetick 'x'
+legend('a','b','c','d','e')
+title('Model coefficients')
+
+%% plot volatility surface of simulated model for day k
+% choose k 
+k = 1;
+[X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
+Z = H(k,1) + H(k,2) .* X + H(k,3) .* X.^2 + H(k,4) .* Y + H(k,5) .* X .* Y;
+figure
+surface(X,Y,Z)
+view(3)
+
+
+
+
 %% Vektor f�r Anzahl der Tage ermitteln
-tag = ones(1907,1); 
-for i = 2:1907
-    tag(i) = tag(i-1)+1;
-end
-clear i;
-
-
-%% Simulate AR Modell for different Coefficients
-%% Get AR coefficients for different linear Model coefficients
-model = arima(1,0,0);
-% 1. Koeffizient:
-ARCoeff1 = estimate(model, coeff(:,1));
-% 2. Koeffizient:
-ARCoeff2 = estimate(model, coeff(:,2));
-% 3. Koeffizient:
-ARCoeff3 = estimate(model, coeff(:,3));
-% 4. Koeffizient:
-ARCoeff4 = estimate(model, coeff(:,4));
-% 5. Koeffizient:
-ARCoeff5 = estimate(model, coeff(:,5));
-
-%% ***Hier k�nnte der Kalman Filter eingesetzt werden???
-
-
-%% Statt dem Kalman Filter wird hier ein AR Modell verwendet um die implizite Volatilit�tsfl�che �ber die Zeit zu betrachten
-rng default; % for reproducability
-% 1.Koeffizient
-sim1 = simulate(ARCoeff1,1900,'NumPaths',1000,'Y0',coeff(:,1));
-% 2.Koeffizient
-sim2 = simulate(ARCoeff2,1900,'NumPaths',1000,'Y0',coeff(:,2));
-% 3.Koeffizient
-sim3 = simulate(ARCoeff3,1900,'NumPaths',1000,'Y0',coeff(:,3));
-% 4.Koeffizient
-sim4 = simulate(ARCoeff4,1900,'NumPaths',1000,'Y0',coeff(:,4));
-% 5.Koeffizient
-sim5 = simulate(ARCoeff5,1900,'NumPaths',1000,'Y0',coeff(:,5));
-
+% tag = ones(1907,1); 
+% for i = 2:1907
+%     tag(i) = tag(i-1)+1;
+% end
+% clear i;
+% 
+% 
+% %% Simulate AR Modell for different Coefficients
+% %% Get AR coefficients for different linear Model coefficients
+% model = arima(1,0,0);
+% % 1. Koeffizient:
+% ARCoeff1 = estimate(model, coeff(:,1));
+% % 2. Koeffizient:
+% ARCoeff2 = estimate(model, coeff(:,2));
+% % 3. Koeffizient:
+% ARCoeff3 = estimate(model, coeff(:,3));
+% % 4. Koeffizient:
+% ARCoeff4 = estimate(model, coeff(:,4));
+% % 5. Koeffizient:
+% ARCoeff5 = estimate(model, coeff(:,5));
+% 
+% %% ***Hier k�nnte der Kalman Filter eingesetzt werden???
+% 
+% 
+% %% Statt dem Kalman Filter wird hier ein AR Modell verwendet um die implizite Volatilit�tsfl�che �ber die Zeit zu betrachten
+% rng default; % for reproducability
+% % 1.Koeffizient
+% sim1 = simulate(ARCoeff1,1900,'NumPaths',1000,'Y0',coeff(:,1));
+% % 2.Koeffizient
+% sim2 = simulate(ARCoeff2,1900,'NumPaths',1000,'Y0',coeff(:,2));
+% % 3.Koeffizient
+% sim3 = simulate(ARCoeff3,1900,'NumPaths',1000,'Y0',coeff(:,3));
+% % 4.Koeffizient
+% sim4 = simulate(ARCoeff4,1900,'NumPaths',1000,'Y0',coeff(:,4));
+% % 5.Koeffizient
+% sim5 = simulate(ARCoeff5,1900,'NumPaths',1000,'Y0',coeff(:,5));
+% 
