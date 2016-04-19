@@ -27,22 +27,8 @@ filteredDataPut = getFilteredDataPut(data);
 %% model implied volatilities for call options
 %
 %% evaluate the row number where day changes
-
-% NOTE: function only works if dates are really sorted
-filteredDataCall = sortrows(filteredDataCall, 'Date');
-
-dataPerDay2 = getDiffDays(filteredDataCall.Date);
-
-%% find date changes
-
-dateChange = filteredDataCall.Date(1:end-1) ~= filteredDataCall.Date(2:end);
-dateChange = [true; dateChange];
-dataPerDay = find(dateChange);
-
-assert(all(dataPerDay == dataPerDay2))
-
-% get unique dates
-uniqueDates = unique(filteredDataCall.Date);
+% get unique dates and row number, where day changes
+[uniqueDates, dataPerDay] = unique(filteredDataCall.Date);
 
 % NOTE: old implementation skips observations for last date
 % attach value of (last index + 1) to dates
@@ -93,9 +79,8 @@ gnOfFit2 = mdl.Rsquared.Adjusted;
 %       normalized root mean square error: 'NRMSE' (1 = perfect fit)
 %       normalized mean square error: 'NMSE' (1 = perfect fit)
 
-% vola = getModelledVola(filteredDataCall, coeff, dataPerDay);
+vola = getModelledVola(filteredDataCall, coeff, dayChanges);
 
-load vola;
 gnOfFit3 = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
 gnOfFit4 = goodnessOfFit(vola,filteredDataCall.implVol,'NRMSE');
 gnOfFit5 = goodnessOfFit(vola,filteredDataCall.implVol,'NMSE');
@@ -108,7 +93,7 @@ gnOfFit5 = goodnessOfFit(vola,filteredDataCall.implVol,'NMSE');
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-k = 1123;
+k = 123;
 [X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
 Z = coeff(k,1) + coeff(k,2) .* X + coeff(k,3) .* X.^2 + coeff(k,4) .* Y + coeff(k,5) .* X .* Y;
 figure
@@ -116,12 +101,12 @@ surface(X,Y,Z)
 view(3)
 
 hold on;
-scatter3(filteredDataCall.Moneyness(dataPerDay(k):dataPerDay(k+1)-1),filteredDataCall.TimeToMaturity(dataPerDay(k):dataPerDay(k+1)-1),filteredDataCall.implVol(dataPerDay(k):dataPerDay(k+1)-1));
+scatter3(filteredDataCall.Moneyness(dayChanges(k):dayChanges(k+1)-1),filteredDataCall.TimeToMaturity(dayChanges(k):dayChanges(k+1)-1),filteredDataCall.implVol(dayChanges(k):dayChanges(k+1)-1));
 xlabel('Moneyness');
 ylabel('Time to Maturity');
 zlabel('implied Volatility');
 
-
+hold off;
 
 
 %% TODO: next steps
@@ -167,6 +152,7 @@ EstSpec = vgxvarx(Spec,coeff);
 H = vgxsim(EstSpec,100);
 
 %% plot simulated coefficients of model
+figure;
 plot(1:100, H)
 grid on
 grid minor
