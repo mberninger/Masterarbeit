@@ -1,5 +1,5 @@
 % THIS IS MY MAIN SCRIPT
-clear all;
+clear;
 clc;
 close all;
 
@@ -34,31 +34,12 @@ filteredDataPut = getFilteredDataPut(data);
 % attach value of (last index + 1) to dates
 dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
 
-%% find coefficients for model; used modell: implied volatility = a + b*moneyness + c*moneyness^2 + d*timeToMaturity + e*moneyness*timeToMaturity
-nDates = size(uniqueDates, 1);
-coeff = zeros(5, nDates);
-for ii = 1:nDates
-%       moneyness = filteredDataCall.Moneyness(dataPerDay(i):dataPerDay(i+1)-1);
-%       moneyness_2 = moneyness.^2;
-%       time = filteredDataCall.TimeToMaturity(dataPerDay(i):dataPerDay(i+1)-1);
-%       data_money = [moneyness, moneyness_2, time, time.*moneyness];
-%       iVol = filteredDataCall.implVol(dataPerDay(i):dataPerDay(i+1)-1);
-
-    % get all observations for current day
-    thisObs = filteredDataCall(dayChanges(ii):dayChanges(ii+1)-1, :);
-    
-    % get design matrix
-    Xmatrix = [thisObs.Moneyness, thisObs.Moneyness.^2, ...
-        thisObs.TimeToMaturity, ...
-        thisObs.TimeToMaturity .* thisObs.Moneyness];
-    
-    % fit model and extract coefficients
-    mdl = LinearModel.fit(Xmatrix, thisObs.implVol);
-    coeff(:,ii) = table2array(mdl.Coefficients(:,1));
-
-end
-clear ii;
-coeff = coeff.';
+%% find coefficients for model; choose model coefficients: 
+% choose from possible explanatory variables: 1 = moneyness, 2 =
+% moneyness^2, 3 = timeToMaturity, 4 = timeToMaturity^2, 5 =
+% moneyness*timeToMaturity
+model = [1, 3, 5];
+[coeff, Rsquared] = getCoeff(model, filteredDataCall, dayChanges);
 
 %% plot coefficients of model
 plot(uniqueDates, coeff)
@@ -70,44 +51,28 @@ title('Model coefficients')
 % TODO: find suitable names for coefficients
 
 %% Goodness-of-fit:
-% for examaple: Rsquared-test: (1 = perfect fit)
-gnOfFit1 = mdl.Rsquared.Ordinary;
-gnOfFit2 = mdl.Rsquared.Adjusted;
-
 % other goodness-of-fit test:   
 %       mean square error: 'MSE' (0 = perfect fit)
 %       normalized root mean square error: 'NRMSE' (1 = perfect fit)
 %       normalized mean square error: 'NMSE' (1 = perfect fit)
+vola = getModelledVola(filteredDataCall, coeff, model, dayChanges);
 
-vola = getModelledVola(filteredDataCall, coeff, dayChanges);
-
-gnOfFit3 = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
-gnOfFit4 = goodnessOfFit(vola,filteredDataCall.implVol,'NRMSE');
-gnOfFit5 = goodnessOfFit(vola,filteredDataCall.implVol,'NMSE');
-
-
+gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
+% gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'NRMSE');
+% gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'NMSE');
 
 %% plot volatility surface with estimated coefficients
-% choose in k the day
+% choose the day in the first input variable
 % the boundarys for the moneyness and the time to maturity are the same as
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-k = 123;
-[X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
-Z = coeff(k,1) + coeff(k,2) .* X + coeff(k,3) .* X.^2 + coeff(k,4) .* Y + coeff(k,5) .* X .* Y;
-figure
-surface(X,Y,Z)
-view(3)
+plotSurface(13,coeff,model,filteredDataCall,dayChanges);
 
-hold on;
-scatter3(filteredDataCall.Moneyness(dayChanges(k):dayChanges(k+1)-1),filteredDataCall.TimeToMaturity(dayChanges(k):dayChanges(k+1)-1),filteredDataCall.implVol(dayChanges(k):dayChanges(k+1)-1));
-xlabel('Moneyness');
-ylabel('Time to Maturity');
-zlabel('implied Volatility');
-
-hold off;
-
+%% get the goodness of fit out-of-sample for chosen model
+% choose percentage for out-of-sample data
+model = [1,2,3,4,5];
+gnOfFitOutOfSample3 = getOutOfSampleGnOfFit(0.8,model,filteredDataCall,dayChanges);
 
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real
