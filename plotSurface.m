@@ -8,10 +8,6 @@ maturityGrid = 20/225:0.1:510/225;
 
 [M,T] = meshgrid(moneyGrid, maturityGrid);
 
-% Not required anymore: preallocate surface values
-% Note: never hardcode values; you had zeros(22,21)
-% Z = zeros(size(M));
-
 % vectorize grid values
 mVals = M(:);
 tVals = T(:);

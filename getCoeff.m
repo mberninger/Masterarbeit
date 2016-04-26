@@ -4,6 +4,8 @@ function [ coeff, Rsquared ] = getCoeff( chosenModel, filteredData, dayChanges)
 %   Additionally the ordinary and the adjusted rsquared are estimated
 nDates = length(dayChanges)-1;
 coeff = zeros(length(chosenModel)+1, nDates);
+rsquaredOrdinary = zeros(1908,1);
+rsquaredAdjusted = zeros(1908,1);
 for i = 1:nDates    
     thisObs = filteredData(dayChanges(i):dayChanges(i+1)-1, :);
     
@@ -17,10 +19,12 @@ for i = 1:nDates
     % fit model and extract coefficients
     mdl = LinearModel.fit(model,thisObs.implVol);
     coeff(:,i) = table2array(mdl.Coefficients(:,1));
-
+    
+    rsquaredOrdinary(i) = mdl.Rsquared.Ordinary;
+    rsquaredAdjusted(i) = mdl.Rsquared.Adjusted;
 end
 
 coeff = coeff.';
-Rsquared = [mdl.Rsquared.Ordinary, mdl.Rsquared.Adjusted];
+Rsquared = [rsquaredOrdinary, rsquaredAdjusted];
 end
 
