@@ -1,4 +1,4 @@
-function [ dataCallPerm, evalStart, evalStop, inSample ] = getRandSubsample( k, chosenData, dayChanges )
+function [ dataCallPerm, evalStart, evalStop ] = getRandSubsample( k, chosenData, dayChanges )
 %GETRANDSUBSAMPLE permutates the chosenData for every day and gives it back
 %in "dataCallPerm"
 %   k describes the partial of the data das is used of out-of-sample
@@ -11,9 +11,7 @@ evalStart = zeros();
 evalStop = zeros();
 for i = 1:length(dayChanges)-1
     nbOfDays = dayChanges(i+1)-dayChanges(i);
-    randData(dayChanges(i):dayChanges(i+1)-1,1) = (dayChanges(i)-1 + randperm(nbOfDays)).';
-%     randData(dayChanges(i):dayChanges(i+1)-1,1) = permDays.';
-    
+    randData(dayChanges(i):dayChanges(i+1)-1,1) = (dayChanges(i)-1 + randperm(nbOfDays)).';    
     inSample(i,1) = round(nbOfDays*k);
     evalStart(i) = dayChanges(i);
     evalStop(i) = dayChanges(i)+inSample(i)-1;
