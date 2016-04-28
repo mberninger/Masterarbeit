@@ -39,7 +39,7 @@ dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
 % moneyness^2, 3 = timeToMaturity, 4 = timeToMaturity^2, 5 =
 % moneyness*timeToMaturity
 model = [1, 3, 5];
-[coeff, Rsquared] = getCoeff(model, filteredDataCall, dayChanges);
+[coeff, Rsquared] = getCoeff(model, filteredDataCall, dayChanges, dayChanges-1);
 
 %% plot coefficients of model
 plot(uniqueDates, coeff)
@@ -53,13 +53,11 @@ title('Model coefficients')
 %% Goodness-of-fit:
 % other goodness-of-fit test:   
 %       mean square error: 'MSE' (0 = perfect fit)
-%       normalized root mean square error: 'NRMSE' (1 = perfect fit)
-%       normalized mean square error: 'NMSE' (1 = perfect fit)
-vola = getModelledVola(filteredDataCall, coeff, model, dayChanges);
 
+% evaluate volatility with modelled coefficients
+vola = evalVola(filteredDataCall, coeff, model, dayChanges, dayChanges-1);
+% test evaluated and implied volatility with goodness of fit
 gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
-% gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'NRMSE');
-% gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'NMSE');
 
 %% plot volatility surface with estimated coefficients
 % choose the day in the first input variable
@@ -70,9 +68,8 @@ gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
 plotSurface(13,coeff,model,filteredDataCall,dayChanges);
 
 %% get the goodness of fit out-of-sample for chosen model
-% choose percentage for out-of-sample data
-model = [1,2,3,4,5];
-gnOfFitOutOfSample3 = getOutOfSampleGnOfFit(0.8,model,filteredDataCall,dayChanges);
+% choose percentage for out-of-sample data in first input variable
+gnOfFitOutOfSample = getOutOfSampleGnOfFit(0.8,model,filteredDataCall,dayChanges);
 
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real
