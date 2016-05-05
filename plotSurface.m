@@ -12,11 +12,8 @@ maturityGrid = 20/225:0.1:510/225;
 mVals = M(:);
 tVals = T(:);
 
-% get all possible explanatory variables
-allExplanVars = [mVals, mVals.^2, tVals, tVals.^2, mVals.*tVals];
-
-% get required explanatory variables only
-thisModelExplanVars = allExplanVars(:, chosenModel);
+% get required explanatory variables 
+thisModelExplanVars = getExplanVars(mVals, tVals, chosenModel);
 modelEquation = [ones(size(mVals, 1), 1) thisModelExplanVars];
 
 % get implied vola values predicted by model

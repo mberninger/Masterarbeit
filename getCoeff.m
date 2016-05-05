@@ -1,30 +1,30 @@
-function [ coeff, Rsquared ] = getCoeff( chosenModel, filteredData, evalStart, evalStop)
+function [ coeff, modelCriterion ] = getCoeff( chosenModel, filteredData )
 % In this function the coefficients of a linear model are estimated.
 %   depending on the chosenModel, the explanatory variables are chosen.
-%   Additionally the ordinary and the adjusted rsquared are estimated
-nDates = length(evalStart)-1;
+%   Additionally the model criterion AIC, AICc, BIC, CAIC are 
+uniqueDates = unique(filteredData.Date);
+nDates = length(uniqueDates);
 coeff = zeros(length(chosenModel)+1, nDates);
-rsquaredOrdinary = zeros(nDates,1);
-rsquaredAdjusted = zeros(nDates,1);
-for i = 1:nDates    
-    thisObs = filteredData(evalStart(i):evalStop(i+1), :);
+modelCriterion = zeros(nDates,1);
+% rsquaredOrdinary = zeros(nDates,1);
+% rsquaredAdjusted = zeros(nDates,1);
+for ii = 1:nDates    
     
-    % get design matrix
-    Xmatrix = [thisObs.Moneyness, thisObs.Moneyness.^2, ...
-        thisObs.TimeToMaturity, thisObs.TimeToMaturity.^2, ...
-        thisObs.TimeToMaturity .* thisObs.Moneyness];
-
-    thisModelXmatrix = Xmatrix(:,chosenModel);
+    thisDate = uniqueDates(ii);
+    thisObs = getObs(thisDate,filteredData);
+    
+    % get design matrix for chosen model
+    thisModelXmatrix = getExplanVars(thisObs.Moneyness, thisObs.TimeToMaturity, chosenModel);
     
     % fit model and extract coefficients
     mdl = LinearModel.fit(thisModelXmatrix,thisObs.implVol);
-    coeff(:,i) = table2array(mdl.Coefficients(:,1));
-    
-    rsquaredOrdinary(i) = mdl.Rsquared.Ordinary;
-    rsquaredAdjusted(i) = mdl.Rsquared.Adjusted;
+    coeff(:,ii) = table2array(mdl.Coefficients(:,1));
+    modelCriterion(ii,:) = mdl.ModelCriterion.AIC;
+%     rsquaredOrdinary(ii) = mdl.Rsquared.Ordinary;
+%     rsquaredAdjusted(ii) = mdl.Rsquared.Adjusted;
 end
 
 coeff = coeff.';
-Rsquared = [rsquaredOrdinary, rsquaredAdjusted];
+% Rsquared = [rsquaredOrdinary, rsquaredAdjusted];
 end
 
