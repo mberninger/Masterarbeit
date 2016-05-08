@@ -34,7 +34,7 @@ filteredDataPut = getFilteredDataPut(data);
 % attach value of (last index + 1) to dates
 dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
 
-%% get the goodness of fit out-of-sample for all possible models, to find the one that fits best
+%% get the goodness of fit out-of-sample and AIC in-sample for all possible models, to find the one that fits best
 % choose percentage for out-of-sample data in first input variable
 allModels = [1,2,0,0,0;
     1,3,0,0,0;
@@ -42,15 +42,18 @@ allModels = [1,2,0,0,0;
     1,2,3,5,0;
     1,2,3,4,5];
 [mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, 100, 0.8, uniqueDates, filteredDataCall);
+modelAIC = evalModelCriterion(allModels, filteredDataCall);
 
-[indexMSE, bestModelMSE, indexRMSE, bestModelRMSE] = getBestModel(mseOutOfSample,rmseOutOfSample);
+[ bestModelMSE, freqBestModelMSE ] = getBestModel(mseOutOfSample);
+[ bestModelRMSE, freqBestModelRMSE ] = getBestModel(rmseOutOfSample);
+[ bestModelAIC, freqBestModelAIC ] = getBestModel(modelAIC);
 
 %% find coefficients for model; choose model coefficients: 
 % choose from possible explanatory variables: 1 = moneyness, 2 =
 % moneyness^2, 3 = timeToMaturity, 4 = timeToMaturity^2, 5 =
 % moneyness*timeToMaturity
-model = [1,2];
-[coeff, modelCriterion] = getCoeff(model, filteredDataCall);
+model = [1,2,3,4,5];
+coeff = getCoeff(model, filteredDataCall);
 
 %% plot coefficients of model
 plot(uniqueDates, coeff)
@@ -61,23 +64,24 @@ legend('a','b','c','d','e')
 title('Model coefficients')
 % TODO: find suitable names for coefficients
 
-%% Goodness-of-fit:
-% other goodness-of-fit test:   
-%       mean square error: 'MSE' (0 = perfect fit)
+%% Goodness-of-fit:  
+%   mean square error: 0 = perfect fit
+%   root mean squared error: 0 = perfect fit
 
 % evaluate volatility with modelled coefficients
 vola = evalVola(filteredDataCall, coeff, model );
-% test evaluated and implied volatility with goodness of fit
-% gnOfFit = goodnessOfFit(vola,filteredDataCall.implVol,'MSE');
+
+% test mean squared and root mean squared error evaluated and implied volatility 
 mse = getMse(vola,filteredDataCall.implVol,length(vola));
 rmse = getRmse(vola,filteredDataCall.implVol,length(vola));
+
 %% plot volatility surface with estimated coefficients
 % choose the day in the first input variable
 % the boundarys for the moneyness and the time to maturity are the same as
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-plotSurface(13,coeff,model,filteredDataCall,dayChanges);
+plotSurface(1223,coeff,model,filteredDataCall,dayChanges);
 
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real
@@ -112,32 +116,32 @@ plotSurface(13,coeff,model,filteredDataCall,dayChanges);
 %     do we need a 5-dimensional joint model
 
 %% dependency of estimated coefficients
-depOfCoeff = corr(coeff);
-
-
-%% fit VAR model
-Spec = vgxset('n',5,'nAR',1, 'Constant',true);
-EstSpec = vgxvarx(Spec,coeff);
-% simulate coeff for 100 obs
-H = vgxsim(EstSpec,100);
-
-%% plot simulated coefficients of model
-figure;
-plot(1:100, H)
-grid on
-grid minor
-datetick 'x'
-legend('a','b','c','d','e')
-title('Model coefficients')
-
-%% plot volatility surface of simulated model for day k
-% choose k 
-k = 1;
-[X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
-Z = H(k,1) + H(k,2) .* X + H(k,3) .* X.^2 + H(k,4) .* Y + H(k,5) .* X .* Y;
-figure
-surface(X,Y,Z)
-view(3)
+% depOfCoeff = corr(coeff);
+% 
+% 
+% %% fit VAR model
+% Spec = vgxset('n',5,'nAR',1, 'Constant',true);
+% EstSpec = vgxvarx(Spec,coeff);
+% % simulate coeff for 100 obs
+% H = vgxsim(EstSpec,100);
+% 
+% %% plot simulated coefficients of model
+% figure;
+% plot(1:100, H)
+% grid on
+% grid minor
+% datetick 'x'
+% legend('a','b','c','d','e')
+% title('Model coefficients')
+% 
+% %% plot volatility surface of simulated model for day k
+% % choose k 
+% k = 1;
+% [X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
+% Z = H(k,1) + H(k,2) .* X + H(k,3) .* X.^2 + H(k,4) .* Y + H(k,5) .* X .* Y;
+% figure
+% surface(X,Y,Z)
+% view(3)
 
 
 

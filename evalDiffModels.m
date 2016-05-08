@@ -1,6 +1,7 @@
 function [ mse, rmse ] = evalDiffModels( model, dataInSample, dataOutOfSample )
-%EVALDIFFMOGNOFFIT evaluates the mean squared and root mean squared error
-%for the different models
+%EVALDIFFMODELS evaluates the mean squared and root mean squared error for
+%a specific dataInSample and dataOutOfSample for all possible models
+%   The different columns 1-5 represent the 5 different models
 
 mse = zeros(1,size(model,1));
 rmse = zeros(1,size(model,1));
