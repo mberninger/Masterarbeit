@@ -12,7 +12,7 @@ inSampleTest = round(kPerc*thisObsSize);
 % get dataset only for the inSample row numbers and the outOfSample row
 % numbers, the different columns from randData are put underneath
 dataInSample = selectedData(randData(1:inSampleTest,:),:);
-dataOutOfSample = selectedData(randData(inSampleTest:thisObsSize,:),:);
+dataOutOfSample = selectedData(randData((inSampleTest+1):thisObsSize,:),:);
 
 end
 

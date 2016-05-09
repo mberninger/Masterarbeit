@@ -3,8 +3,9 @@ function [ thisObs, thisObsSize ] = getObs( chosenDate, selectedData )
 %   it gives back the dataset of the chosen date and the length of the dataset of
 %   the chosen date
 
-    thisObsSize = size(selectedData(selectedData.Date == chosenDate,:),1);
     thisObs = selectedData(selectedData.Date == chosenDate,:);
+    % REMARK: searching entries with given date is costly, only do it once!
+    thisObsSize = size(thisObs,1);
 
 end
 

@@ -13,8 +13,8 @@ for ii = 1:size(model,1)
     vola = evalVola(dataOutOfSample, coeffInSample, thisModel);
     implVolaData = dataOutOfSample.implVol;
     
-    mse(ii) = getMse(vola,implVolaData,length(vola));
-    rmse(ii) = getRmse(vola,implVolaData,length(vola));
+    mse(ii) = getMse(vola,implVolaData);
+    rmse(ii) = getRmse(vola,implVolaData);
 end
 
 
