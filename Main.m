@@ -60,7 +60,7 @@ plot(uniqueDates, coeff)
 grid on
 grid minor
 datetick 'x'
-legend('a','b','c','d','e')
+legend('a','b','c','d','e','f')
 title('Model coefficients')
 % TODO: find suitable names for coefficients
 
@@ -81,7 +81,7 @@ rmse = getRmse(vola,filteredDataCall.implVol,length(vola));
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-plotSurface(1223,coeff,model,filteredDataCall,dayChanges);
+plotSurface(12,coeff,model,filteredDataCall,dayChanges);
 
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real

@@ -13,6 +13,8 @@ for ii = 1:size(model,1)
     vola = evalVola(dataOutOfSample, coeffInSample, thisModel);
     implVolaData = dataOutOfSample.implVol;
     
+    % evaluate the mse and rmse for every one of the nRep out-of-sample
+    % permutated subsamples, which have the size "samp"
     for j=1:nRep
         mse(j,ii) = getMse(vola(j*samp-samp+1:j*samp),implVolaData(j*samp-samp+1:j*samp));
         rmse(j,ii) = getRmse(vola(j*samp-samp+1:j*samp),implVolaData(j*samp-samp+1:j*samp));
