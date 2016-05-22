@@ -72,8 +72,8 @@ title('Model coefficients')
 vola = evalVola(filteredDataCall, coeff, model );
 
 % test mean squared and root mean squared error evaluated and implied volatility 
-mse = getMse(vola,filteredDataCall.implVol,length(vola));
-rmse = getRmse(vola,filteredDataCall.implVol,length(vola));
+mse = getMse(vola,filteredDataCall.implVol);
+rmse = getRmse(vola,filteredDataCall.implVol);
 
 %% plot volatility surface with estimated coefficients
 % choose the day in the first input variable
