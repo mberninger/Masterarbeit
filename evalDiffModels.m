@@ -8,7 +8,13 @@ rmse = zeros(nRep,size(model,1));
 for ii = 1:size(model,1)
     a = model(ii,:)>0;
     thisModel = model(ii,a);
-    coeffInSample = getCoeff(thisModel, dataInSample);
+    coeffInSample = getCoeff(thisModel, dataInSample); 
+    % You still fit the model only once with all data drawn from nReps
+    % draws! If you have 200 observations, you have to fit the model on
+    % 0.8*200=160 observations only, and evaluate it on the remaining
+    % 0.2*200=40 observations, and repeat that nReps times.
+    %
+    % And NOT: fit the model on 0.8*200*nReps only once!
     
     vola = evalVola(dataOutOfSample, coeffInSample, thisModel);
     implVolaData = dataOutOfSample.implVol;
