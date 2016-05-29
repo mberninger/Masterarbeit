@@ -41,11 +41,12 @@ allModels = [1,2,0,0,0;
     1,3,5,0,0;
     1,2,3,5,0;
     1,2,3,4,5];
-[mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, 100, 0.8, uniqueDates, filteredDataCall);
+nRep = 100;
+[mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
 modelAIC = evalModelCriterion(allModels, filteredDataCall);
 
-[ bestModelMSE, freqBestModelMSE ] = getBestModel(mseOutOfSample);
-[ bestModelRMSE, freqBestModelRMSE ] = getBestModel(rmseOutOfSample);
+[ bestModelMSE, freqBestModelMSE, bestModelMSEAll, freqBestModelMSEAll ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
+[ bestModelRMSE, freqBestModelRMSE, bestModelRMSEAll, freqBestModelRMSEAll ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
 [ bestModelAIC, freqBestModelAIC ] = getBestModel(modelAIC);
 
 %% find coefficients for model; choose model coefficients: 

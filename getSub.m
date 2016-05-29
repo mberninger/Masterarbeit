@@ -1,17 +1,17 @@
-function [ dataInSample, dataOutOfSample ] = getSub( thisObsSize, selectedData, nRep, kPerc )
-%GETSUB evaluates permutated out-of-sample and in sample dataset
+function [ dataInSample, dataOutOfSample ] = getSub( thisObsSize, selectedData, kPerc )
+%GETSUB evaluates one permutated dataset of this observation and seperates
+% it in an out-of-sample and an in sample dataset
 
-% get permutated row number for this observation, repeated nRep-times
-randData = zeros(thisObsSize,nRep);
-for ii=1:nRep
-randData(:,ii) = randperm(thisObsSize).';
-end
+% get permutated row number for this observation
+randData = randperm(thisObsSize).';
+
 % get inSample number for this observation
-inSampleTest = round(kPerc*thisObsSize);
-% get dataset only for the inSample row numbers and the outOfSample row
-% numbers, the different columns from randData are put underneath
-dataInSample = selectedData(randData(1:inSampleTest,:),:);
-dataOutOfSample = selectedData(randData((inSampleTest+1):thisObsSize,:),:);
+inSampleValue = round(kPerc*thisObsSize);
+% seperate permutated dataset randData into inSample dataset and out of 
+% sample dataset, the in sample dataset has length inSampleValue, the out
+% of sample dataset is the rest
+dataInSample = selectedData(randData(1:inSampleValue,:),:);
+dataOutOfSample = selectedData(randData((inSampleValue+1):thisObsSize,:),:);
 
 end
 
