@@ -1,4 +1,4 @@
-function [ bestModel, freqBestModel ] = getBestModel( gnOfFit )
+function [ bestModel, freqBestModel, indexMSE ] = getBestModel( gnOfFit )
 %GETBESTMODEL determines the model, which fits best on how many days
 %   bestModel is the column number of the model which fits best most often,
 %   freqBestModel is the number of days the bestModel fits best

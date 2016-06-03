@@ -1,4 +1,4 @@
-function [ filteredDataCall ] = getFilteredDataCall( data )
+function [ filteredDataCall ] = getFilteredDataCall( data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound )
 % This function filters the data and outputs the filtered data of the call
 % options
 
@@ -23,10 +23,6 @@ callUpperBounds = dataCall.DAX;
 discountFactor = exp(-dataCall.EONIAmatched .* dataCall.TimeToMaturity);
 callLowerBounds = max((dataCall.DAX - (dataCall.Strike .* discountFactor)), 0);
 
-% store messy observations
-dataCallObergrenze = dataCall(dataCall.OptionPrice > callUpperBounds, :);
-dataCallUntergrenze = dataCall(dataCall.OptionPrice < callLowerBounds, :);
-
 % store valid observations
 validArbitrageInds = callLowerBounds < dataCall.OptionPrice & ...
     dataCall.OptionPrice < callUpperBounds ;
@@ -39,17 +35,17 @@ validTimeValInds = timeVal > 0;
 
 %% 3. step: check time to maturity, it should be between 20 and 510 days
 maturityInDays = dataCall.TimeToMaturity .* 255;
-validMaturityInds = 20 <= maturityInDays & maturityInDays <= 510;
+validMaturityInds = timeToMaturityLowerBound <= maturityInDays & maturityInDays <= timeToMaturityUpperBound;
 
 %% 4. step:  evaluate and check moneyness, it should be between 0.8 and 1.2 
 mnyNess = dataCall.Strike ./ dataCall.DAX;
-validMnyNessInds = 0.8 <= mnyNess & mnyNess <= 1.2;
+validMnyNessInds = mnyNessLowerBound <= mnyNess & mnyNess <= mnyNessUpperBound;
 
 %% 5. step: check option price, it should be bigger than 5 
-validPriceInds = dataCall.OptionPrice >= 5;
+validPriceInds = dataCall.OptionPrice >= optionPrice;
 
 %% 6. step: check implied volatilities, it should be between 5 and 50 percent
-validImplVolaInds = 0.05 <= dataCall.implVol & dataCall.implVol <= 0.5;
+validImplVolaInds = implVolLowerBound <= dataCall.implVol & dataCall.implVol <= implVolUpperBound;
 
 %% integrate moneyness into dataCall table
 dataCall.Moneyness = mnyNess;

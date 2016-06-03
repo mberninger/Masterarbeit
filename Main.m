@@ -20,9 +20,18 @@ load data;
 % 5: check option price, it should be bigger than 5
 % 6: check implied volatilities, it should be between 5 and 50 percent
 
-filteredDataCall = getFilteredDataCall(data);
-filteredDataPut = getFilteredDataPut(data);
+timeToMaturityLowerBound = 20;
+timeToMaturityUpperBound = 510;
+mnyNessLowerBound = 0.8;
+mnyNessUpperBound = 1.2;
+optionPrice = 5;
+implVolLowerBound = 0.05;
+implVolUpperBound = 0.5;
 
+filteredDataCall = getFilteredDataCall(data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound);
+filteredDataPut = getFilteredDataPut(data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound);
+
+clear timeToMaturityLowerBound timeToMaturityUpperBound mnyNessLowerBound mnyNessUpperBound optionPrice implVolLowerBound implVolUpperBound;
 
 %% model implied volatilities for call options
 %
@@ -42,19 +51,36 @@ allModels = [1,2,0,0,0;
     1,2,3,5,0;
     1,2,3,4,5];
 nRep = 100;
-[mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
+% [mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
+load('mseOutOfSample.mat');
+load('rmseOutOfSample.mat');
 modelAIC = evalModelCriterion(allModels, filteredDataCall);
 
-[ bestModelMSE, freqBestModelMSE, bestModelMSEAll, freqBestModelMSEAll ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
-[ bestModelRMSE, freqBestModelRMSE, bestModelRMSEAll, freqBestModelRMSEAll ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
-[ bestModelAIC, freqBestModelAIC ] = getBestModel(modelAIC);
+%% the different models are compared in order to find the bestModel
+[ best, fre, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
+[ bestR, freR, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
+[ bestA, freA, allDaysAIC ] = getBestModel(modelAIC);
+
+% the different goodness of fit measures are compared for every day
+bestModelPerDay = table((1:1908)', allDaysMSE, allDaysRMSE, allDaysAIC, 'VariableNames', {'Days','MSE','RMSE','AIC'});
+diffBestModels = bestModelPerDay(bestModelPerDay.MSE ~= bestModelPerDay.RMSE | bestModelPerDay.MSE ~= bestModelPerDay.AIC, :);
+bestModelIs5 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 5, :);
+bestModelIs4 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 4, :);
+bestModelIs3 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 3, :);
+bestModelIs2 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 2, :);
+bestModelIs1 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 1, :);
+clear allDaysMSE allDaysRMSE allDaysAIC;
 
 %% find coefficients for model; choose model coefficients: 
 % choose from possible explanatory variables: 1 = moneyness, 2 =
 % moneyness^2, 3 = timeToMaturity, 4 = timeToMaturity^2, 5 =
 % moneyness*timeToMaturity
-model = [1,2,3,4,5];
-coeff = getCoeff(model, filteredDataCall);
+model3 = [1,3,5];
+coeff3 = getCoeff(model3, filteredDataCall);
+model4 = [1,2,3,5];
+coeff4 = getCoeff(model4, filteredDataCall);
+model5 = [1,2,3,4,5];
+coeff5 = getCoeff(model5, filteredDataCall);
 
 %% plot coefficients of model
 plot(uniqueDates, coeff)
@@ -82,8 +108,10 @@ rmse = getRmse(vola,filteredDataCall.implVol);
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-plotSurface(12,coeff,model,filteredDataCall,dayChanges);
-
+    tag = 97;
+    plotSurface(tag,coeff3,model3,filteredDataCall,dayChanges);
+    plotSurface(tag,coeff4,model4,filteredDataCall,dayChanges);
+    plotSurface(tag,coeff5,model5,filteredDataCall,dayChanges);
 %% TODO: next steps
 % - goodness-of-fit: how good does estimated smooth surface describe real
 % implied volatilities?
@@ -121,7 +149,7 @@ plotSurface(12,coeff,model,filteredDataCall,dayChanges);
 % 
 % 
 % %% fit VAR model
-% Spec = vgxset('n',5,'nAR',1, 'Constant',true);
+% Spec = vgxset('n',6,'nAR',1, 'Constant',true);
 % EstSpec = vgxvarx(Spec,coeff);
 % % simulate coeff for 100 obs
 % H = vgxsim(EstSpec,100);
@@ -140,48 +168,9 @@ plotSurface(12,coeff,model,filteredDataCall,dayChanges);
 % k = 1;
 % [X,Y] = meshgrid(0.8:0.02:1.2,20/225:0.1:510/225);
 % Z = H(k,1) + H(k,2) .* X + H(k,3) .* X.^2 + H(k,4) .* Y + H(k,5) .* X .* Y;
+% alphaVal = 0.5;
 % figure
-% surface(X,Y,Z)
-% view(3)
-
-
-
-
-%% Vektor f�r Anzahl der Tage ermitteln
-% tag = ones(1907,1); 
-% for i = 2:1907
-%     tag(i) = tag(i-1)+1;
-% end
-% clear i;
-% 
-% 
-% %% Simulate AR Modell for different Coefficients
-% %% Get AR coefficients for different linear Model coefficients
-% model = arima(1,0,0);
-% % 1. Koeffizient:
-% ARCoeff1 = estimate(model, coeff(:,1));
-% % 2. Koeffizient:
-% ARCoeff2 = estimate(model, coeff(:,2));
-% % 3. Koeffizient:
-% ARCoeff3 = estimate(model, coeff(:,3));
-% % 4. Koeffizient:
-% ARCoeff4 = estimate(model, coeff(:,4));
-% % 5. Koeffizient:
-% ARCoeff5 = estimate(model, coeff(:,5));
-% 
-% %% ***Hier k�nnte der Kalman Filter eingesetzt werden???
-% 
-% 
-% %% Statt dem Kalman Filter wird hier ein AR Modell verwendet um die implizite Volatilit�tsfl�che �ber die Zeit zu betrachten
-% rng default; % for reproducability
-% % 1.Koeffizient
-% sim1 = simulate(ARCoeff1,1900,'NumPaths',1000,'Y0',coeff(:,1));
-% % 2.Koeffizient
-% sim2 = simulate(ARCoeff2,1900,'NumPaths',1000,'Y0',coeff(:,2));
-% % 3.Koeffizient
-% sim3 = simulate(ARCoeff3,1900,'NumPaths',1000,'Y0',coeff(:,3));
-% % 4.Koeffizient
-% sim4 = simulate(ARCoeff4,1900,'NumPaths',1000,'Y0',coeff(:,4));
-% % 5.Koeffizient
-% sim5 = simulate(ARCoeff5,1900,'NumPaths',1000,'Y0',coeff(:,5));
-% 
+% surface(X,Y,Z,'FaceAlpha', alphaVal)
+% grid on
+% grid minor
+view(3)

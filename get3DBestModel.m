@@ -1,4 +1,4 @@
-function [ bestModel, freqBestModel, bestModelAll, freqBestModelAll ] = get3DBestModel( gnOfFit, uniqueDates, nRep )
+function [ bestModel, freqBestModel, bestModelAll, freqBestModelAll, bestModelForDay ] = get3DBestModel( gnOfFit, uniqueDates, nRep )
 % GET3DBESTMODEL determines the model, which fits best on how many days for
 % a 3-dimensional array gnOfFit
 %   gnOfFit is a 3-dimensional array of size nRep x msize x nDates

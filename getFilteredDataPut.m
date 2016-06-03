@@ -1,4 +1,4 @@
-function [ filteredDataPut ] = getFilteredDataPut( data )
+function [ filteredDataPut ] = getFilteredDataPut( data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound )
 % This function filters the data and outputs the filtered data of the put
 % options
 
@@ -34,17 +34,17 @@ validTimeValIndsPut = timeValPut > 0;
 
 %% 3. step: check time to maturity, it should be between 20 and 510 days
 maturityInDaysPut = dataPut.TimeToMaturity .* 255;
-validMaturityIndsPut = 20 <= maturityInDaysPut & maturityInDaysPut <= 510;
+validMaturityIndsPut = timeToMaturityLowerBound <= maturityInDaysPut & maturityInDaysPut <= timeToMaturityUpperBound;
 
 %% 4. step: evaluate and check moneyness, it should be between 0.8 and 1.2
 mnyNessPut = dataPut.Strike ./ dataPut.DAX;
-validMnyNessIndsPut = 0.8 <= mnyNessPut & mnyNessPut <= 1.2;
+validMnyNessIndsPut = mnyNessLowerBound <= mnyNessPut & mnyNessPut <= mnyNessUpperBound;
 
 %% 5. step: check option price, it should be bigger than 5 
-validPriceIndsPut = dataPut.OptionPrice >= 5;
+validPriceIndsPut = dataPut.OptionPrice >= optionPrice;
 
 %% 6. step: check implied volatilities, it should be between 5 and 50 percent
-validImplVolaIndsPut = 0.05 <= dataPut.implVol & dataPut.implVol <= 0.5;
+validImplVolaIndsPut = implVolLowerBound <= dataPut.implVol & dataPut.implVol <= implVolUpperBound;
 
 %% integrate moneyness into dataPut table
 dataPut.Moneyness = mnyNessPut;
