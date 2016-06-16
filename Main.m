@@ -36,13 +36,16 @@ clear timeToMaturityLowerBound timeToMaturityUpperBound mnyNessLowerBound mnyNes
 %% evaluate the row number where day changes
 % get unique dates and row number, where day changes
 [uniqueDates, dataPerDay] = unique(filteredDataCall.Date);
+[uniqueDatesPut, dataPerDayPut] = unique(filteredDataPut.Date);
 
 % NOTE: old implementation skips observations for last date
 % attach value of (last index + 1) to dates
 dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
+dayChangesPut = [dataPerDayPut; size(filteredDataPut, 1)+1];
 
+clear dataPerDay dataPerDayPut;
 
-%% FITTING THE IMPLIED VOLATILITY SURFACES for call options
+%% FITTING THE IMPLIED VOLATILITY SURFACES for call and put options
 %
 %% OUT OF SAMPLE TESTING:
 %% get the goodness of fit out-of-sample and AIC in-sample for all possible models, to find the one that fits best
@@ -54,14 +57,24 @@ allModels = [1,2,0,0,0;
     1,2,3,4,5];
 nRep = 100;
 % [mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
-load('mseOutOfSample.mat');
-load('rmseOutOfSample.mat');
-modelAIC = evalModelCriterion(allModels, filteredDataCall);
+% [mseOutOfSamplePut, rmseOutOfSamplePut] = evalMseRmse(allModels, nRep, 0.8, uniqueDatesPut, filteredDataPut);
+% load('mseOutOfSample.mat');
+% load('rmseOutOfSample.mat');
+load('mseOutOfSamplePut.mat');
+load('rmseOutOfSamplePut.mat');
+% modelAIC = evalModelCriterion(allModels, filteredDataCall);
+% modelAICPut = evalModelCriterion(allModels, filteredDataPut);
+% load('modelAIC.mat');
+load('modelAICPut.mat');
 
 %% the different models are compared in order to find the bestModel
-[ best, fre, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
-[ bestR, freR, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
-[ bestA, freA, allDaysAIC ] = getBestModel(modelAIC);
+% [ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
+% [ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
+% [ ~, ~, allDaysAIC ] = getBestModel(modelAIC);
+
+[ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSamplePut, uniqueDatesPut, nRep);
+[ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSamplePut, uniqueDatesPut, nRep);
+[ ~, ~, allDaysAIC ] = getBestModel(modelAICPut);
 
 % the different goodness of fit measures are compared for every day
 bestModelPerDay = table((1:1908)', allDaysMSE, allDaysRMSE, allDaysAIC, 'VariableNames', {'Days','MSE','RMSE','AIC'});
@@ -79,10 +92,13 @@ clear allDaysMSE allDaysRMSE allDaysAIC;
 % moneyness*timeToMaturity
 model3 = [1,3,5];
 coeff3 = getCoeff(model3, filteredDataCall);
+coeff3Put = getCoeff(model3, filteredDataPut);
 model4 = [1,2,3,5];
 coeff4 = getCoeff(model4, filteredDataCall);
+coeff4Put = getCoeff(model4, filteredDataPut);
 model5 = [1,2,3,4,5];
 coeff5 = getCoeff(model5, filteredDataCall);
+coeff5Put = getCoeff(model5, filteredDataPut);
 
 %% plot volatility surface with estimated coefficients
 % choose the day in the first input variable
@@ -95,6 +111,10 @@ coeff5 = getCoeff(model5, filteredDataCall);
     plotSurface(tag,coeff4,model4,filteredDataCall,dayChanges);
     plotSurface(tag,coeff5,model5,filteredDataCall,dayChanges);
     
+    plotSurface(tag,coeff3Put,model3,filteredDataPut,dayChangesPut);
+    plotSurface(tag,coeff4Put,model4,filteredDataPut,dayChangesPut);
+    plotSurface(tag,coeff5Put,model5,filteredDataPut,dayChangesPut);
+    
 %% IN SAMPLE TESTING
 %% Goodness-of-fit:
 %   mean square error: 0 = perfect fit
@@ -102,14 +122,18 @@ coeff5 = getCoeff(model5, filteredDataCall);
 
 % evaluate volatility with modelled coefficients
 vola = evalVola(filteredDataCall, coeff5, model5 );
+volaPut = evalVola(filteredDataPut, coeff5Put, model5 );
 
 % test mean squared and root mean squared error evaluated and implied volatility 
 mse = getMse(vola,filteredDataCall.implVol);
 rmse = getRmse(vola,filteredDataCall.implVol);
+msePut = getMse(volaPut,filteredDataPut.implVol);
+rmsePut = getRmse(volaPut,filteredDataPut.implVol);
     
 %% after in-sample and out-of-sample testing: model 5 is chosen:
 model = [1,2,3,4,5];
 coeff = getCoeff(model, filteredDataCall);
+coeffPut = getCoeff(model, filteredDataPut);
 
 %% TODO: next steps
 % - some descriptive statistics: 
@@ -119,9 +143,21 @@ coeff = getCoeff(model, filteredDataCall);
 %   - ...
 
 %% properties of the estimated coefficients:
-% plot histogram of estimated coefficient and normal pdf to compare
+% plot histogram of estimated coefficient
 figure;
-plotCoeffDensity(coeff(:,5));
+histogram(coeff(:,5));
+
+% Kolmogorov-Smirnov test for standard normal distribution of coefficients:
+val = coeff(:,1);
+mu = mean(val);
+sigma = std(val);
+x = (val-mu)/sigma;
+[h,pvalue] = kstest(x);
+
+% test for other distributions 
+    % test_cdf = makedist('tLocationScale','mu',mu,'sigma',sigma);
+    % [h2,p] = kstest(val,'CDF',test_cdf,'Alpha',0.01);
+
 % plot coefficients of the model over time -> not constant, but time
 % dependent:
 figure;
@@ -131,11 +167,54 @@ grid minor
 datetick 'x'
 legend('level','slope moneyness','curvature moneyness','slope time to maturity','curvature time to maturity','slope cross-product term','Location','southwest')
 title('Model coefficients')
+
 % dependency of different coefficients
 depOfCoeff = corr(coeff);
 
+% partial autocorrelation functions for the coefficients:
+figure;
+parcorr(coeff(:,1),50);
+figure;
+parcorr(coeff(:,2),50);
+figure;
+parcorr(coeff(:,3),50);
+figure;
+parcorr(coeff(:,4),50);
+figure;
+parcorr(coeff(:,5),50);
+
 %% MODELLING THE DYNAMICS OF THE IMPLIED VOLATILITY SURFACES
 %% IN SAMPLE TESTING:
+%% Model 0: AR model for every chosen coefficient:
+% AR(5) chosen after looking at the partial autocorrelation function before
+m = arima(5,0,0);
+est1 = estimate(m,coeff(:,1));
+est2 = estimate(m,coeff(:,2));
+est3 = estimate(m,coeff(:,3));
+est4 = estimate(m,coeff(:,4));
+est5 = estimate(m,coeff(:,5));
+est6 = estimate(m,coeff(:,6));
+
+param1 = evalCoeffAR(coeff(:,1),est1.Constant,est1.AR);
+param2 = evalCoeffAR(coeff(:,2),est2.Constant,est2.AR);
+param3 = evalCoeffAR(coeff(:,3),est3.Constant,est3.AR);
+param4 = evalCoeffAR(coeff(:,4),est4.Constant,est4.AR);
+param5 = evalCoeffAR(coeff(:,5),est5.Constant,est5.AR);
+param6 = evalCoeffAR(coeff(:,6),est6.Constant,est6.AR);
+param = [param1,param2,param3,param4,param5,param6];
+
+clear m est1 est2 est3 est4 est5 est6 param1 param2 param3 param4 param5 param6;
+
+residual = coeff-param;
+val = residual(:,1);
+mu = mean(residual(:,1));
+sigma = std(residual(:,1));
+[H,P] = kstest((val-mu)/sigma);
+
+mseAR = getMse(param,coeff);
+volaAR = evalVola(filteredDataCall,param,model);
+mseVolaAR = getMse(volaAR,vola);
+
 %% Model 1: Vector autoregressive model:
 Spec = vgxset('n',6,'nAR',1, 'Constant',true);
 [EstSpec1, ~, llh1] = vgxvarx(Spec,coeff);
@@ -173,16 +252,25 @@ mse3 = getMse(coeff,estParam3);
 mse4 = getMse(coeff,estParam4);
 mse5 = getMse(coeff,estParam5);
 
-%-> model5 performs best
+% -> model5 performs best
+
+volaVAR = evalVola(filteredDataCall,estParam5,model);
+mseVolaVAR = getMse(volaVAR,vola);
+
+% -> comparing mseVolaVAR and mseVolaAR shows that model 1 performs better
+% than model 0
 
 %% Model 2: coefficients of previous day are used for current day as a comparing model
 paramMod2 = getParamMod2(coeff);
 
 mseMod2 = getMse(coeff,paramMod2);
 
+volaMod2 = evalVola(filteredDataCall,paramMod2,model);
+mseVolaMod2 = getMse(volaMod2,vola);
+
 % -> VAR(5) model performs best
 
-clear mse1 mse2 mse3 mse4 
+clear mse1 mse2 mse3 mse4
 clear EstSpec1 EstSpec2 EstSpec3 EstSpec4
 clear estParam1 estParam2 estParam3 estParam4
 clear Spec
