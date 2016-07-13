@@ -106,7 +106,7 @@ coeff5Put = getCoeff(model5, filteredDataPut);
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-    tag = 97;
+    tag = 18;
     plotSurface(tag,coeff3,model3,filteredDataCall,dayChanges);
     plotSurface(tag,coeff4,model4,filteredDataCall,dayChanges);
     plotSurface(tag,coeff5,model5,filteredDataCall,dayChanges);
@@ -183,80 +183,80 @@ parcorr(coeff(:,5),50);
 %% IN SAMPLE TESTING:
 %% Model 0: AR model for every chosen coefficient:
 % test how many lags (1-5 are tested) are best when an AR model is used:
-bestModelAR = testBestModelAR(coeff);
+bestModelAR = testBestModelAR(coeff, 5);
 % lag 5 is best => AR(5) model is used
-param = getParamAR(coeff, 5);
+predCoeffAR = getPredCoeffAR(coeff, bestModelAR);
 
-volaAR = evalVola(filteredDataCall,param,model);
+volaAR = evalVola(filteredDataCall,predCoeffAR,model);
 mseVolaAR = getMse(volaAR,filteredDataCall.implVol);
 
 %% Model 1: Vector autoregressive model:
-bestModelVAR = testBestModelVAR(coeff);
+% test how many lags (1-5 are tested) are best when an VAR model is used:
+bestModelVAR = testBestModelVAR(coeff, 5);
+% lag 3 is best => AR(3) model is used
+predCoeffVAR = getPredCoeffVAR(coeff, bestModelVAR);
 
-paramVAR = getParamVAR(coeff, 3);
-
-volaVAR = evalVola(filteredDataCall,paramVAR,model);
+volaVAR = evalVola(filteredDataCall,predCoeffVAR,model);
 mseVolaVAR = getMse(volaVAR,filteredDataCall.implVol);
 
 % -> comparing mseVolaVAR and mseVolaAR shows that model 1 performs better
 % than model 0
 
 %% Model 2: coefficients of previous day are used for current day as a comparing model
-paramMod2 = getParamMod2(coeff);
+predCoeffMod2 = getPredCoeffMod2(coeff);
 
-volaMod2 = evalVola(filteredDataCall,paramMod2,model);
+volaMod2 = evalVola(filteredDataCall,predCoeffMod2,model);
 mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
 
-% -> VAR(3) model performs best
+% -> VAR(3) model performs best in-sample
 
 %% OUT-OF-SAMPLE TESTING:
 % only the first year is taken to evaluate the coefficients for the
 % volatility surface: (this can equally be done for the first two years and
 % so on, remember to choose trading days!)
+[startOut, ~] = getRowsOfDate(filteredDataCall,2006,07,03);
 [~, stopOut] = getRowsOfDate(filteredDataCall,2007,06,29);
-[startPred, stopPred] = getRowsOfDate(filteredDataCall,2007,07,02);
+[startPred, ~] = getRowsOfDate(filteredDataCall,2007,07,02);
+[~, stopPred] = getRowsOfDate(filteredDataCall,2007,12,28);
+startDay = getRowsOfDate(table(uniqueDates,'VariableNames',{'Date'}),2007,07,02);
 
 model = [1,2,3,4,5];
-coeffOut = getCoeff(model, filteredDataCall(1:stopOut,:));
+coeffOut = getCoeff(model, filteredDataCall(startOut:stopOut,:));
 
-[coeffLength, coeffSize] = size(coeffOut);
+predLength = size(unique(filteredDataCall(startPred:stopPred,1)),1);
+%[coeffLength, coeffSize] = size(coeffOut);
 %% Model 0: Autoregressive model
 % test out of sample, how many lags are best in AR model:
-bestModelAROut = testBestModelAROut(coeffOut, coeffLength, coeffSize, filteredDataCall, startPred, stopPred, model);
+bestModelAROut = testBestModelAROut(coeffOut, predLength, filteredDataCall, startDay, model, uniqueDates);
 % model 4 performs best => use AR(4) model
-predcoeff = evalCoeffAR(coeffOut,coeffLength, coeffSize, 5);
+predCoeffAROut = getPredCoeffAROut(coeffOut, predLength, bestModelAROut);
 
-volaAR = evalVola(filteredDataCall(startPred:stopPred,:),predcoeff(end,:),model);
-mseVolaAROut = getMse(volaAR,filteredDataCall.implVol(startPred:stopPred));
-
+volaAROut = evalVola(filteredDataCall(startPred:stopPred,:),predCoeffAROut,model);
+mseVolaAROut = getMse(volaAROut,filteredDataCall.implVol(startPred:stopPred));
 
 %% Model 1: Vector autoregressive model
-bestModelVAROut = testBestModelVAROut(coeffOut, coeffLength, coeffSize, filteredDataCall, startPred, stopPred, model);
+bestModelVAROut = testBestModelVAROut(coeffOut, predLength, filteredDataCall, startDay, uniqueDates, model);
 % evaluate the parameters of the VAR(5) model, which models the dynamics of
 % the implied volatility surface:
-Spec = vgxset('n',6,'nAR',bestModelVAROut, 'Constant',true);
-[EstSpecOut, ~, ~] = vgxvarx(Spec,coeffOut);
 
-% use these parameters and the previous 5 coefficients from coeffOut to
-% predict the coefficients for the next day:
-beta = evalCoeffVar(coeffOut(coeffLength-coeffSize+1:coeffLength,:),EstSpecOut.a,EstSpecOut.AR);
+predCoeffVAROut = getPredCoeffVAROut(coeffOut,predLength,bestModelVAROut);
 
 % use the predicted coefficients to evaluate the volatility for the next
 % day
-predVola = evalVola(filteredDataCall(startPred:stopPred,:), beta(end,:), model);
+volaVAROut = evalVola(filteredDataCall(startPred:stopPred,:), predCoeffVAROut, model);
 
 % compare the predicted volatility for the next day with the implied
 % volatility for the next day:
-mseVolaVAROut = getMse(filteredDataCall.implVol(startPred:stopPred,:),predVola);
+mseVolaVAROut = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaVAROut);
 
 %% Model2: coefficients of previous day are used for current day as a comparing model
 % evaluate the coefficients of the previous day as the coefficients of the
 % current day
-paramMod2Out = getParamMod2(coeffOut);
+predCoeffMod2Out = repmat(coeffOut(end,:),predLength,1);
 
-predVolaMod2 = evalVola(filteredDataCall(startPred:stopPred,:), paramMod2Out(coeffLength,:), model);
+volaMod2Out = evalVola(filteredDataCall(startPred:stopPred,:), predCoeffMod2Out, model);
 
-mseVolaMod2Out = getMse(filteredDataCall.implVol(startPred:stopPred,:),predVolaMod2);
+mseVolaMod2Out = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaMod2Out);
 
 
 %% THE KALMAN FILTER MODEL FOR THE DYNAMIC OF THE VOLATILITY CURVE
@@ -269,9 +269,9 @@ mseCoeffKalman = getMse(coeff,coeffKalman);
 mseVolaKalman = getMse(filteredDataCall.implVol,volaKalman);
 
 %% OUT-OF-SAMPLE-Testing:
-[coeffKalmanOut,epsOut] = Kalman_Filter(coeffOut,uniqueDates,filteredDataCall(1:stopOut,:),vola(1:stopOut));
+[coeffKalmanOut,epsOut] = Kalman_Filter(coeffOut,uniqueDates,filteredDataCall(startOut:stopOut,:),vola(startOut:stopOut));
 
-coeffKalmanOutPred = kalmanPred(coeffKalmanOut,epsOut,coeffOut,uniqueDates,filteredDataCall, model, stopOut);
+coeffKalmanOutPred = kalmanPred(coeffKalmanOut,epsOut,coeffOut,uniqueDates,filteredDataCall, model, startOut, stopOut);
 
 volaKalmanOut = evalVola(filteredDataCall(startPred:stopPred,:),coeffKalmanOutPred,model);
 

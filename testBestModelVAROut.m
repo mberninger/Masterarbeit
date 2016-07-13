@@ -1,27 +1,33 @@
-function [ bestModelOut ] = testBestModelVAROut(coeffOut, coeffLength, coeffSize, filteredDataCall, startPred, stopPred, model)
-%UNTITLED7 Summary of this function goes here
-%   Detailed explanation goes here
+function [ bestModelOut ] = testBestModelVAROut(coeffOut, predLength, filteredDataCall, startDay, uniqueDates, model)
+%TESTBESTMODELVAROUT tests out-of-sample for all VAR-models of order 1 to 5, which
+%number of lags is best. 
+%   Only a subsample of the data was chosen to calculated the coefficients
+%   coeffOut. The prediction is done for predLength days.
+%   For every prediction day the mean squared error of the actual implied
+%   volatility and the predicted volatility is calculated. The best Model
+%   is the model that has the lowest mean squared error most often 
 
-mseVolaVAROut = zeros(5,1);
+mseVolaVAROut = zeros(5,predLength);
 
 for ii = 1:5
-    Spec = vgxset('n',6,'nAR',ii, 'Constant',true);
-    [EstSpec5Out, ~, ~] = vgxvarx(Spec,coeffOut);
+    predCoeffVAROut = getPredCoeffVAROut(coeffOut,predLength,ii);
 
-    % use these parameters and the previous 5 coefficients from coeffOut to
-    % predict the coefficients for the next day:
-    beta = evalCoeffVar(coeffOut(coeffLength-coeffSize+1:coeffLength,:),EstSpec5Out.a,EstSpec5Out.AR);
+    for j = 1:predLength
+        
+        thisDate = uniqueDates(startDay+j-1);
+        thisObs = getObs(thisDate,filteredDataCall);
+        
+        % use the predicted coefficients of the ii'th prediction day to evaluate the volatility for the next
+        % day
+        volaVAROut = evalVola(thisObs, predCoeffVAROut(j,:), model);
 
-    % use the predicted coefficients to evaluate the volatility for the next
-    % day
-    predVola = evalVola(filteredDataCall(startPred:stopPred,:), beta(end,:), model);
-
-    % compare the predicted volatility for the next day with the implied
-    % volatility for the next day:
-    mseVolaVAROut(ii,:) = getMse(filteredDataCall.implVol(startPred:stopPred,:),predVola);
+        % compare the predicted volatility for the next day with the implied
+        % volatility for the next day:
+        mseVolaVAROut(ii,j) = getMse(thisObs.implVol,volaVAROut);
+    end
 end
 
-[~, bestModelOut] = min(mseVolaVAROut);
-
+[~, bestModelOutAll] = min(mseVolaVAROut);
+bestModelOut = mode(bestModelOutAll);
 end
 

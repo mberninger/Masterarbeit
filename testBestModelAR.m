@@ -1,11 +1,12 @@
-function [ bestModelBIC ] = testBestModelAR( coeff )
-%UNTITLED3 Summary of this function goes here
-%   Detailed explanation goes here
+function [ bestModelBIC ] = testBestModelAR( coeff, nbOfLags )
+%TESTBESTMODELAR tests for all AR-models of order 1 to nbOfLags, which
+%number of lags is best. 
+%   The best number of lags, which is chosen by the smallest BIC, is the output 
 
 bicAR = zeros(5,size(coeff,2));
 
-for ii = 1:5
-    [~, ~, bicAR(ii,:)] = getParamAR(coeff,ii);    
+for ii = 1:nbOfLags
+    [~, ~, bicAR(ii,:)] = getPredCoeffAR(coeff,ii);    
 end
 
 [~, bestModelBICAll] = min(bicAR);

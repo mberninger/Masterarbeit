@@ -1,4 +1,4 @@
-function [ mu ] = kalmanPred( coeffKalmanOut, epsOut, coeffOut, uniqueDates, filteredDataCall, model, stopOut )
+function [ mu ] = kalmanPred( coeffKalmanOut, epsOut, coeffOut, uniqueDates, filteredDataCall, model, startOut, stopOut )
 %kalmanPred predicts the coefficients for the linear model to evaluate the
 %volatility one day ahead. This function is used for testing the Kalman
 %filter out-of-sample.
@@ -8,10 +8,10 @@ Spec = vgxset('n',6,'nAR',1, 'Constant',true);
 EstSpec1 = vgxvarx(Spec,coeffOut);
 estParam1 = evalCoeffVar(coeffOut,EstSpec1.a,EstSpec1.AR);
 
-volaOut = evalVola(filteredDataCall(1:stopOut,:),coeffOut,model);
+volaOut = evalVola(filteredDataCall(startOut:stopOut,:),coeffOut,model);
 
 residualCoeff = coeffOut - estParam1;
-residualVola = filteredDataCall.implVol(1:stopOut,:) - volaOut;
+residualVola = filteredDataCall.implVol(startOut:stopOut,:) - volaOut;
 
 A = EstSpec1.AR{1,1};
 omega = cov(residualCoeff);

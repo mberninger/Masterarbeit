@@ -1,16 +1,15 @@
-function [ bestModelBIC ] = testBestModelVAR( coeff )
-%UNTITLED6 Summary of this function goes here
-%   Detailed explanation goes here
+function [ bestModelBIC ] = testBestModelVAR( coeff, nbOfLags )
+%TESTBESTMODELVAR tests for all VAR-models of order 1 to nbOfLags, which
+%number of lags is best. 
+%   The best number of lags, which is chosen by the smallest BIC, is the output 
 
-bic = zeros(5,1);
+bic = zeros(nbOfLags,1);
 
-
-for ii = 1:5
-    [~,bic(ii,:)] = getParamVAR(coeff, ii);
+for ii = 1:nbOfLags
+    [~,bic(ii,:)] = getPredCoeffVAR(coeff, ii);
 end
 
-[~, bestModelBICAll] = min(bic);
-bestModelBIC = mode(bestModelBICAll');
+[~, bestModelBIC] = min(bic);
 
 end
 
