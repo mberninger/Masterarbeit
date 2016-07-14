@@ -210,53 +210,20 @@ mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
 
 % -> VAR(3) model performs best in-sample
 
-%% OUT-OF-SAMPLE TESTING:
-% only the first year is taken to evaluate the coefficients for the
-% volatility surface: (this can equally be done for the first two years and
-% so on, remember to choose trading days!)
-[startOut, ~] = getRowsOfDate(filteredDataCall,2006,07,03);
-[~, stopOut] = getRowsOfDate(filteredDataCall,2007,06,29);
-[startPred, ~] = getRowsOfDate(filteredDataCall,2007,07,02);
-[~, stopPred] = getRowsOfDate(filteredDataCall,2007,12,28);
-startDay = getRowsOfDate(table(uniqueDates,'VariableNames',{'Date'}),2007,07,02);
+%% OUT-OF-SAMPLE TESTING: for the AR-model, the VAR-model, model2 and the Kalman filter
+% Here the out-of-sample tests for modelling the volatility surfaces are
+% made. 
+%   Choose l, which is the number of days that are taken to calculate the
+%   coefficients in sample. Then the next day, l+1, is predicted.
+%   This is done k-times. For each time the estimation window for the
+%   out-of-sample window moves one day forward. Then the mean squared error
+%   for the predicted day is calculated. This leads to k mse values. In the
+%   end the model is chosen, which has the smalles mse most often.
 
-model = [1,2,3,4,5];
-coeffOut = getCoeff(model, filteredDataCall(startOut:stopOut,:));
+[bestModelMSETest, bestModelARTest, bestModelVARTest, mse] = testDynamicOutOfSample(filteredDataCall, uniqueDates, 100, 253);
 
-predLength = size(unique(filteredDataCall(startPred:stopPred,1)),1);
-%[coeffLength, coeffSize] = size(coeffOut);
-%% Model 0: Autoregressive model
-% test out of sample, how many lags are best in AR model:
-bestModelAROut = testBestModelAROut(coeffOut, predLength, filteredDataCall, startDay, model, uniqueDates);
-% model 4 performs best => use AR(4) model
-predCoeffAROut = getPredCoeffAROut(coeffOut, predLength, bestModelAROut);
-
-volaAROut = evalVola(filteredDataCall(startPred:stopPred,:),predCoeffAROut,model);
-mseVolaAROut = getMse(volaAROut,filteredDataCall.implVol(startPred:stopPred));
-
-%% Model 1: Vector autoregressive model
-bestModelVAROut = testBestModelVAROut(coeffOut, predLength, filteredDataCall, startDay, uniqueDates, model);
-% evaluate the parameters of the VAR(5) model, which models the dynamics of
-% the implied volatility surface:
-
-predCoeffVAROut = getPredCoeffVAROut(coeffOut,predLength,bestModelVAROut);
-
-% use the predicted coefficients to evaluate the volatility for the next
-% day
-volaVAROut = evalVola(filteredDataCall(startPred:stopPred,:), predCoeffVAROut, model);
-
-% compare the predicted volatility for the next day with the implied
-% volatility for the next day:
-mseVolaVAROut = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaVAROut);
-
-%% Model2: coefficients of previous day are used for current day as a comparing model
-% evaluate the coefficients of the previous day as the coefficients of the
-% current day
-predCoeffMod2Out = repmat(coeffOut(end,:),predLength,1);
-
-volaMod2Out = evalVola(filteredDataCall(startPred:stopPred,:), predCoeffMod2Out, model);
-
-mseVolaMod2Out = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaMod2Out);
+% -> The VAR(1) Model is better than the AR-Model and model 2, as it has
+% the smallest MSE most often
 
 
 %% THE KALMAN FILTER MODEL FOR THE DYNAMIC OF THE VOLATILITY CURVE
@@ -265,14 +232,14 @@ coeffKalman = Kalman_Filter(coeff,uniqueDates,filteredDataCall,vola);
 
 volaKalman = evalVola(filteredDataCall,coeffKalman,model);
 
-mseCoeffKalman = getMse(coeff,coeffKalman);
 mseVolaKalman = getMse(filteredDataCall.implVol,volaKalman);
 
-%% OUT-OF-SAMPLE-Testing:
-[coeffKalmanOut,epsOut] = Kalman_Filter(coeffOut,uniqueDates,filteredDataCall(startOut:stopOut,:),vola(startOut:stopOut));
+%% OUT OF SAMPLE TESTING:
 
-coeffKalmanOutPred = kalmanPred(coeffKalmanOut,epsOut,coeffOut,uniqueDates,filteredDataCall, model, startOut, stopOut);
+mseVolaKalmanOut = getPredCoeffKalmanOut(uniqueDates, filteredDataCall, vola, 100, 253);
 
-volaKalmanOut = evalVola(filteredDataCall(startPred:stopPred,:),coeffKalmanOutPred,model);
+mseVolaVARKalman = [mse(:,2),mseVolaKalmanOut];
+[~, smallerMod] = min(mseVolaVARKalman');
+bestModelVARKalman = mode(smallerMod);
 
-mseVolaKalmanOut = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaKalmanOut);
+% -> The Kalman filter is better than only using the VAR(1)-model
