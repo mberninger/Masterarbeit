@@ -106,7 +106,7 @@ coeff5Put = getCoeff(model5, filteredDataPut);
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-    tag = 18;
+    tag = 526;
     plotSurface(tag,coeff3,model3,filteredDataCall,dayChanges);
     plotSurface(tag,coeff4,model4,filteredDataCall,dayChanges);
     plotSurface(tag,coeff5,model5,filteredDataCall,dayChanges);
@@ -178,6 +178,8 @@ figure;
 parcorr(coeff(:,4),50);
 figure;
 parcorr(coeff(:,5),50);
+figure;
+parcorr(coeff(:,6),50);
 
 %% MODELLING THE DYNAMICS OF THE IMPLIED VOLATILITY SURFACES
 %% IN SAMPLE TESTING:
@@ -228,7 +230,7 @@ mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
 
 %% THE KALMAN FILTER MODEL FOR THE DYNAMIC OF THE VOLATILITY CURVE
 %% IN SAMPLE TESTING:
-coeffKalman = Kalman_Filter(coeff,uniqueDates,filteredDataCall,vola);
+coeffKalman = getPredCoeffKalman(coeff,uniqueDates,filteredDataCall,vola);
 
 volaKalman = evalVola(filteredDataCall,coeffKalman,model);
 

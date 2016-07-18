@@ -3,7 +3,7 @@ function [ bestModelBIC ] = testBestModelAR( coeff, nbOfLags )
 %number of lags is best. 
 %   The best number of lags, which is chosen by the smallest BIC, is the output 
 
-bicAR = zeros(5,size(coeff,2));
+bicAR = zeros(nbOfLags,size(coeff,2));
 
 for ii = 1:nbOfLags
     [~, ~, bicAR(ii,:)] = getPredCoeffAR(coeff,ii);    
