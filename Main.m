@@ -133,53 +133,9 @@ rmsePut = getRmse(volaPut,filteredDataPut.implVol);
 %% after in-sample and out-of-sample testing: model 5 is chosen:
 model = [1,2,3,4,5];
 coeff = getCoeff(model, filteredDataCall);
+vola = evalVola(filteredDataCall, coeff, model);
 coeffPut = getCoeff(model, filteredDataPut);
-
-%% TODO: next steps
-% - some descriptive statistics: 
-%   - observations per day
-%   - observed maturities per day
-%   - number of filtered observations
-%   - ...
-
-%% properties of the estimated coefficients:
-% plot histogram of estimated coefficient
-figure;
-histogram(coeff(:,5));
-
-% Kolmogorov-Smirnov test for standard normal distribution of coefficients:
-val = coeff(:,1);
-mu = mean(val);
-sigma = std(val);
-x = (val-mu)/sigma;
-[h,pvalue] = kstest(x);
-
-% plot coefficients of the model over time -> not constant, but time
-% dependent:
-figure;
-plot(uniqueDates, coeff)
-grid on
-grid minor
-datetick 'x'
-legend('level','slope moneyness','curvature moneyness','slope time to maturity','curvature time to maturity','slope cross-product term','Location','southwest')
-title('Model coefficients')
-
-% dependency of different coefficients
-depOfCoeff = corr(coeff);
-
-% partial autocorrelation functions for the coefficients:
-figure;
-parcorr(coeff(:,1),50);
-figure;
-parcorr(coeff(:,2),50);
-figure;
-parcorr(coeff(:,3),50);
-figure;
-parcorr(coeff(:,4),50);
-figure;
-parcorr(coeff(:,5),50);
-figure;
-parcorr(coeff(:,6),50);
+volaPut = evalVola(filteredDataPut, coeffPut, model );
 
 %% MODELLING THE DYNAMICS OF THE IMPLIED VOLATILITY SURFACES
 %% IN SAMPLE TESTING:
