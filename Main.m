@@ -31,17 +31,21 @@ implVolUpperBound = 0.5;
 filteredDataCall = getFilteredDataCall(data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound);
 filteredDataPut = getFilteredDataPut(data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound);
 
+filteredData = [filteredDataCall; filteredDataPut];
+filteredData = sortrows(filteredData,'Date','ascend');
+filteredDataCall = filteredData;
+
 clear timeToMaturityLowerBound timeToMaturityUpperBound mnyNessLowerBound mnyNessUpperBound optionPrice implVolLowerBound implVolUpperBound;
 
 %% evaluate the row number where day changes
 % get unique dates and row number, where day changes
 [uniqueDates, dataPerDay] = unique(filteredDataCall.Date);
-[uniqueDatesPut, dataPerDayPut] = unique(filteredDataPut.Date);
+% [uniqueDatesPut, dataPerDayPut] = unique(filteredDataPut.Date);
 
 % NOTE: old implementation skips observations for last date
 % attach value of (last index + 1) to dates
 dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
-dayChangesPut = [dataPerDayPut; size(filteredDataPut, 1)+1];
+% dayChangesPut = [dataPerDayPut; size(filteredDataPut, 1)+1];
 
 clear dataPerDay dataPerDayPut;
 
@@ -56,25 +60,25 @@ allModels = [1,2,0,0,0;
     1,2,3,5,0;
     1,2,3,4,5];
 nRep = 100;
-% [mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
+[mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
 % [mseOutOfSamplePut, rmseOutOfSamplePut] = evalMseRmse(allModels, nRep, 0.8, uniqueDatesPut, filteredDataPut);
 % load('mseOutOfSample.mat');
 % load('rmseOutOfSample.mat');
-load('mseOutOfSamplePut.mat');
-load('rmseOutOfSamplePut.mat');
-% modelAIC = evalModelCriterion(allModels, filteredDataCall);
+% load('mseOutOfSamplePut.mat');
+% load('rmseOutOfSamplePut.mat');
+modelAIC = evalModelCriterion(allModels, filteredDataCall);
 % modelAICPut = evalModelCriterion(allModels, filteredDataPut);
 % load('modelAIC.mat');
-load('modelAICPut.mat');
+% load('modelAICPut.mat');
 
 %% the different models are compared in order to find the bestModel
-% [ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
-% [ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
-% [ ~, ~, allDaysAIC ] = getBestModel(modelAIC);
+[ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
+[ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
+[ ~, ~, allDaysAIC ] = getBestModel(modelAIC);
 
-[ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSamplePut, uniqueDatesPut, nRep);
-[ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSamplePut, uniqueDatesPut, nRep);
-[ ~, ~, allDaysAIC ] = getBestModel(modelAICPut);
+% [ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSamplePut, uniqueDatesPut, nRep);
+% [ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSamplePut, uniqueDatesPut, nRep);
+% [ ~, ~, allDaysAIC ] = getBestModel(modelAICPut);
 
 % the different goodness of fit measures are compared for every day
 bestModelPerDay = table((1:size(uniqueDates,1))', allDaysMSE, allDaysRMSE, allDaysAIC, 'VariableNames', {'Days','MSE','RMSE','AIC'});
@@ -92,13 +96,13 @@ clear allDaysMSE allDaysRMSE allDaysAIC;
 % moneyness*timeToMaturity
 model3 = [1,3,5];
 coeff3 = getCoeff(model3, filteredDataCall);
-coeff3Put = getCoeff(model3, filteredDataPut);
+% coeff3Put = getCoeff(model3, filteredDataPut);
 model4 = [1,2,3,5];
 coeff4 = getCoeff(model4, filteredDataCall);
-coeff4Put = getCoeff(model4, filteredDataPut);
+% coeff4Put = getCoeff(model4, filteredDataPut);
 model5 = [1,2,3,4,5];
 coeff5 = getCoeff(model5, filteredDataCall);
-coeff5Put = getCoeff(model5, filteredDataPut);
+% coeff5Put = getCoeff(model5, filteredDataPut);
 
 %% plot volatility surface with estimated coefficients
 % choose the day in the first input variable
@@ -106,14 +110,14 @@ coeff5Put = getCoeff(model5, filteredDataPut);
 % chosen for filtering the data, so
     % 0.8 < moneyness < 1.2
     % 20 < timeToMaturity .*225 < 510
-    tag = 526;
+    tag = 97;
     plotSurface(tag,coeff3,model3,filteredDataCall,dayChanges);
     plotSurface(tag,coeff4,model4,filteredDataCall,dayChanges);
     plotSurface(tag,coeff5,model5,filteredDataCall,dayChanges);
     
-    plotSurface(tag,coeff3Put,model3,filteredDataPut,dayChangesPut);
-    plotSurface(tag,coeff4Put,model4,filteredDataPut,dayChangesPut);
-    plotSurface(tag,coeff5Put,model5,filteredDataPut,dayChangesPut);
+%     plotSurface(tag,coeff3Put,model3,filteredDataPut,dayChangesPut);
+%     plotSurface(tag,coeff4Put,model4,filteredDataPut,dayChangesPut);
+%     plotSurface(tag,coeff5Put,model5,filteredDataPut,dayChangesPut);
     
 %% IN SAMPLE TESTING
 %% Goodness-of-fit:
@@ -178,7 +182,7 @@ mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
 %   for the predicted day is calculated. This leads to k mse values. In the
 %   end the model is chosen, which has the smalles mse most often.
 
-[bestModelMSETest, bestModelARTest, bestModelVARTest, mse] = testDynamicOutOfSample(filteredDataCall, uniqueDates, 100, 253);
+[bestModelMSETest, bestModelARTest, bestModelVARTest, mse] = testDynamicOutOfSample(filteredDataCall, uniqueDates, 10, 253);
 
 % -> The VAR(1) Model is better than the AR-Model and model 2, as it has
 % the smallest MSE most often
@@ -194,7 +198,7 @@ mseVolaKalman = getMse(filteredDataCall.implVol,volaKalman);
 
 %% OUT OF SAMPLE TESTING:
 
-mseVolaKalmanOut = getPredCoeffKalmanOut(uniqueDates, filteredDataCall, vola, 100, 253);
+mseVolaKalmanOut = getPredCoeffKalmanOut(uniqueDates, filteredDataCall, vola, 10, 253);
 
 mseVolaVARKalman = [mse(:,2),mseVolaKalmanOut];
 [~, smallerMod] = min(mseVolaVARKalman');
