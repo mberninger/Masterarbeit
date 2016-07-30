@@ -268,7 +268,7 @@ mean(modR4),std(modR4),min(modR4),max(modR4);
 mean(mod5),std(mod5),min(mod5),max(mod5);
 mean(modR5),std(modR5),min(modR5),max(modR5)];
 % xlswrite('outOfSampleTesting.xls',outOfSampleTesting);
-
+ clear mod1 mod2 mod3 mod4 mod5 modR1 modR2 modR3 modR4 modR5
 
 % robustness tests:
 
@@ -343,6 +343,8 @@ grid minor
 datetick 'x'
 legend('level','slope moneyness','curvature moneyness','slope time to maturity','curvature time to maturity','slope cross-product term','Location','southwest')
 title('Model coefficients')
+xlabel('Date')
+ylabel('value of coefficients')
 
 % dependency of different coefficients
 depOfCoeff = corr(coeff);

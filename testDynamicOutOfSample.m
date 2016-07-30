@@ -1,4 +1,4 @@
-function [bestModelMSETest, bestModelARTest, bestModelVARTest, mse] = testDynamicOutOfSample( filteredDataCall, uniqueDates, k, l )
+function [bestModelMSETest, bestModelARTest, bestModelVARTest, mse, rmse] = testDynamicOutOfSample( filteredDataCall, uniqueDates, k, l )
 % Here the out-of-sample tests for modelling the volatility surfaces are
 % made. 
 %   Therefore only the one year (l=253), three years (l= 759) or six years
@@ -12,6 +12,9 @@ mseVolaAROut = zeros(k,1);
 bestModelVAROut = zeros(k,1);
 mseVolaVAROut = zeros(k,1);
 mseVolaMod2Out = zeros(k,1);
+rmseVolaAROut = zeros(k,1);
+rmseVolaVAROut = zeros(k,1);
+rmseVolaMod2Out = zeros(k,1);
 
 for j=1:k
 
@@ -41,6 +44,7 @@ predCoeffAROut = getPredCoeffAROut(coeffOut, predLength, bestModelAROut(j));
 
 volaAROut = evalVola(filteredDataCall(startPred:stopPred,:),predCoeffAROut,model);
 mseVolaAROut(j) = getMse(volaAROut,filteredDataCall.implVol(startPred:stopPred));
+rmseVolaAROut(j) = getRmse(volaAROut,filteredDataCall.implVol(startPred:stopPred));
 
 
 %% Model 1: Vector autoregressive model
@@ -56,6 +60,7 @@ volaVAROut = evalVola(filteredDataCall(startPred:stopPred,:), predCoeffVAROut, m
 % compare the predicted volatility for the next day with the implied
 % volatility for the next day:
 mseVolaVAROut(j) = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaVAROut);
+rmseVolaVAROut(j) = getRmse(filteredDataCall.implVol(startPred:stopPred,:),volaVAROut);
 
 %% Model2: coefficients of previous day are used for current day as a comparing model
 % evaluate the coefficients of the previous day as the coefficients of the
@@ -65,11 +70,12 @@ predCoeffMod2Out = repmat(coeffOut(end,:),predLength,1);
 volaMod2Out = evalVola(filteredDataCall(startPred:stopPred,:), predCoeffMod2Out, model);
 
 mseVolaMod2Out(j) = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaMod2Out);
-
+rmseVolaMod2Out(j) = getRmse(filteredDataCall.implVol(startPred:stopPred,:),volaMod2Out);
 
 end
 
 mse = [mseVolaAROut, mseVolaVAROut, mseVolaMod2Out];
+rmse = [rmseVolaAROut, rmseVolaVAROut, rmseVolaMod2Out];
 [~, numtest] = min(mse');
 bestModelMSETest = mode(numtest);
 

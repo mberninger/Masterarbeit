@@ -182,7 +182,7 @@ mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
 %   for the predicted day is calculated. This leads to k mse values. In the
 %   end the model is chosen, which has the smalles mse most often.
 
-[bestModelMSETest, bestModelARTest, bestModelVARTest, mse] = testDynamicOutOfSample(filteredDataCall, uniqueDates, 10, 253);
+[bestModelMSETest, bestModelARTest, bestModelVARTest, mse, rmse] = testDynamicOutOfSample(filteredDataCall, uniqueDates, 100, 1528);
 
 % -> The VAR(1) Model is better than the AR-Model and model 2, as it has
 % the smallest MSE most often
