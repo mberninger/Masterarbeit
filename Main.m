@@ -151,6 +151,7 @@ predCoeffAR = getPredCoeffAR(coeff, bestModelAR);
 
 volaAR = evalVola(filteredDataCall,predCoeffAR,model);
 mseVolaAR = getMse(volaAR,filteredDataCall.implVol);
+rmseVolaAR = getRmse(volaAR,filteredDataCall.implVol);
 
 %% Model 1: Vector autoregressive model:
 % test how many lags (1-5 are tested) are best when an VAR model is used:
@@ -160,6 +161,7 @@ predCoeffVAR = getPredCoeffVAR(coeff, bestModelVAR);
 
 volaVAR = evalVola(filteredDataCall,predCoeffVAR,model);
 mseVolaVAR = getMse(volaVAR,filteredDataCall.implVol);
+rmseVolaVAR = getRmse(volaVAR,filteredDataCall.implVol);
 
 % -> comparing mseVolaVAR and mseVolaAR shows that model 1 performs better
 % than model 0
@@ -169,6 +171,7 @@ predCoeffMod2 = getPredCoeffMod2(coeff);
 
 volaMod2 = evalVola(filteredDataCall,predCoeffMod2,model);
 mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
+rmseVolaMod2 = getRmse(volaMod2,filteredDataCall.implVol);
 
 % -> VAR(3) model performs best in-sample
 
