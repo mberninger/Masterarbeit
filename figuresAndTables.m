@@ -386,6 +386,9 @@ for ii = 1:5
     [~,bicVAR(ii,:)] = getPredCoeffVAR(coeff, ii);
 end
 
+%comparison of differen models: see Main function: modelling the dynamics
+%of the implied volatilites: in-sample tests
+
 %% out-of-sample test:
 % get best number of lags for AR model
 load('coeffOut6years');
@@ -512,4 +515,125 @@ hold off
 
 
 %% KALMAN FILTER:
+%% in-sample test:
+model = [1,2,3,4,5];
+load('coeff.mat')
+predCoeffVAR = getPredCoeffVAR(coeff, 1);
+volaVAR = evalVola(filteredData,predCoeffVAR,model);
+mseVolaVAR = getMse(volaVAR,filteredData.implVol);
+rmseVolaVAR = getRmse(volaVAR,filteredData.implVol);
+vola = evalVola(filteredData, coeff, model);
+coeffKalman = getPredCoeffKalman(coeff,uniqueDates,filteredData,vola);
+volaKalman = evalVola(filteredData,coeffKalman,model);
+mseVolaKalman = getMse(filteredData.implVol,volaKalman);
+rmseVolaKalman = getRmse(filteredData.implVol,volaKalman);
+gnFitInSampleVARKalman = [mseVolaVAR, mseVolaKalman; rmseVolaVAR, rmseVolaKalman];
+gnFitInSampleVARKalman = table(gnFitInSampleVARKalman(:,1),gnFitInSampleVARKalman(:,2),'VariableNames',{'VAR1_model','Kalman_filter'},'RowNames',{'MSE';'RMSE'});
+
+clear model predCoeffVAR volaVAR mseVolaVAR rmseVolaVAR vola coeffKalman volaKalman mseVolaKalman rmseVolaKalman coeff
+
+%% out-of-sample test:
+load('mseVolaAllMod6yearsOut.mat')
+load('rmseVolaAllMod6yearsOut.mat')
+load('mseVolaKalman6yearsOut.mat')
+load('rmseVolaKalman6yearsOut.mat')
+
+outOfSampleAllKalman = [mean(mse(:,1)),std(mse(:,1)), min(mse(:,1)),max(mse(:,1));
+    mean(rmse(:,1)),std(rmse(:,1)), min(rmse(:,1)),max(rmse(:,1));
+    mean(mse(:,2)),std(mse(:,2)), min(mse(:,2)),max(mse(:,2));
+    mean(rmse(:,2)),std(rmse(:,2)), min(rmse(:,2)),max(rmse(:,2));
+    mean(mse(:,3)),std(mse(:,3)), min(mse(:,3)),max(mse(:,3));
+    mean(rmse(:,3)),std(rmse(:,3)), min(rmse(:,3)),max(rmse(:,3));
+    mean(mseVolaKalmanOut(:,1)),std(mseVolaKalmanOut(:,1)), min(mseVolaKalmanOut(:,1)),max(mseVolaKalmanOut(:,1));
+    mean(rmseVolaKalmanOut(:,1)),std(rmseVolaKalmanOut(:,1)), min(rmseVolaKalmanOut(:,1)),max(rmseVolaKalmanOut(:,1));];
+outOfSampleAllKalman = table(outOfSampleAllKalman(:,1),outOfSampleAllKalman(:,2),outOfSampleAllKalman(:,3),outOfSampleAllKalman(:,4),'VariableNames',{'mean', 'standardDeviation','minimum','maximum'},'RowNames',{'AR_Mod_MSE';'AR_Mod_RMSE';'VAR_Mod_MSE';'VAR_Mod_RMSE';'Comp_Mod_MSE';'Comp_Mod_RMSE';'Kalman_MSE';'Kalman_RMSE'});
+
+%% robustness tests:
+% frequency of being the best model, 6 years, 100 rep
+nDates = 100;
+indexMSE = zeros(nDates,1);
+indexRMSE = zeros(nDates,1);
+
+load('mseVolaAllMod6yearsOut.mat')
+load('rmseVolaAllMod6yearsOut.mat')
+load('mseVolaKalman6yearsOut.mat')
+load('rmseVolaKalman6yearsOut.mat')
+
+mseAllKalman = [mse, mseVolaKalmanOut];
+rmseAllKalman = [rmse, rmseVolaKalmanOut];
+
+for ii = 1:nDates
+    [ ~ , indexMSE(ii,:)] = min(mseAllKalman(ii,:));
+    [ ~ , indexRMSE(ii,:)] = min(rmseAllKalman(ii,:));
+end
+
+[~, modelChange] = unique(sort(indexMSE(:,1)));
+freqBestMSE = [modelChange(2)-modelChange(1),length(indexMSE)+1-modelChange(2)];
+[~, modelChangeR] = unique(sort(indexRMSE(:,1)));
+freqBestRMSE = [modelChangeR(2)-modelChangeR(1),length(indexRMSE)+1-modelChangeR(2)];
+freqOfBestModelDynamic6years = [freqBestMSE;freqBestRMSE];
+freqOfBestModelDynamic6years = table(freqOfBestModelDynamic6years(:,1),freqOfBestModelDynamic6years(:,2),'VariableNames',{'VAR_model','Kalman_filter'},'RowNames',{'MSE_Frequency';'RMSE_Frequency'});
+
+clear mseAllKalman rmseAllKalman nDates indexMSE indexRMSE modelChange modelChangeR freqBestMSE freqBestRMSE mse rmse mseVolaKalmanOut rmseVolaKalmanOut ii
+
+% three years time window:
+load('mseVolaAllMod3yearsOut.mat')
+load('rmseVolaAllMod3yearsOut.mat')
+load('mseVolaKalman3yearsOut.mat')
+load('rmseVolaKalman3yearsOut.mat')
+
+outOfSampleAllKalman3years = [mean(mse(:,1)),std(mse(:,1)), min(mse(:,1)),max(mse(:,1));
+    mean(rmse(:,1)),std(rmse(:,1)), min(rmse(:,1)),max(rmse(:,1));
+    mean(mse(:,2)),std(mse(:,2)), min(mse(:,2)),max(mse(:,2));
+    mean(rmse(:,2)),std(rmse(:,2)), min(rmse(:,2)),max(rmse(:,2));
+    mean(mse(:,3)),std(mse(:,3)), min(mse(:,3)),max(mse(:,3));
+    mean(rmse(:,3)),std(rmse(:,3)), min(rmse(:,3)),max(rmse(:,3));
+    mean(mseVolaKalmanOut(:,1)),std(mseVolaKalmanOut(:,1)), min(mseVolaKalmanOut(:,1)),max(mseVolaKalmanOut(:,1));
+    mean(rmseVolaKalmanOut(:,1)),std(rmseVolaKalmanOut(:,1)), min(rmseVolaKalmanOut(:,1)),max(rmseVolaKalmanOut(:,1));];
+outOfSampleAllKalman3years = table(outOfSampleAllKalman3years(:,1),outOfSampleAllKalman3years(:,2),outOfSampleAllKalman3years(:,3),outOfSampleAllKalman3years(:,4),'VariableNames',{'mean', 'standardDeviation','minimum','maximum'},'RowNames',{'AR_Mod_MSE';'AR_Mod_RMSE';'VAR_Mod_MSE';'VAR_Mod_RMSE';'Comp_Mod_MSE';'Comp_Mod_RMSE';'Kalman_MSE';'Kalman_RMSE'});
+
+clear mse rmse mseVolaKalmanOut rmseVolaKalmanOut
+
+% frequency of being the best model, 3 years, 100 rep
+nDates = 100;
+indexMSE = zeros(nDates,1);
+indexRMSE = zeros(nDates,1);
+
+load('mseVolaAllMod3yearsOut.mat')
+load('rmseVolaAllMod3yearsOut.mat')
+load('mseVolaKalman3yearsOut.mat')
+load('rmseVolaKalman3yearsOut.mat')
+
+mseAllKalman = [mse, mseVolaKalmanOut];
+rmseAllKalman = [rmse, rmseVolaKalmanOut];
+
+for ii = 1:nDates
+    [ ~ , indexMSE(ii,:)] = min(mseAllKalman(ii,:));
+    [ ~ , indexRMSE(ii,:)] = min(rmseAllKalman(ii,:));
+end
+
+[~, modelChange] = unique(sort(indexMSE(:,1)));
+freqBestMSE = [modelChange(2)-modelChange(1),length(indexMSE)+1-modelChange(2)];
+[~, modelChangeR] = unique(sort(indexRMSE(:,1)));
+freqBestRMSE = [modelChangeR(2)-modelChangeR(1),length(indexRMSE)+1-modelChangeR(2)];
+freqOfBestModelDynamic3years = [freqBestMSE;freqBestRMSE];
+freqOfBestModelDynamic3years = table(freqOfBestModelDynamic3years(:,1),freqOfBestModelDynamic3years(:,2),'VariableNames',{'Comparing_model','Kalman_filter'},'RowNames',{'MSE_Frequency';'RMSE_Frequency'});
+
+clear mseAllKalman rmseAllKalman nDates indexMSE indexRMSE modelChange modelChangeR freqBestMSE freqBestRMSE mse rmse mseVolaKalmanOut rmseVolaKalmanOut ii
+
+% figure of coefficients and estimated coefficients via Kalman
+load('coeff.mat')
+coeffKalman = getPredCoeffKalman(coeff,uniqueDates,filteredData,vola);
+figure;
+plot(uniqueDates, coeff)
+grid on
+grid minor
+datetick 'x'
+legend('level','slope moneyness','curvature moneyness','slope time to maturity','curvature time to maturity','slope cross-product term','Location','southwest')
+title('Model coefficients')
+xlabel('Date')
+ylabel('value of coefficients')
+hold on
+plot(uniqueDates, coeffKalman)
+hold off
 

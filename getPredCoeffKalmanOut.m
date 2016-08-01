@@ -1,4 +1,4 @@
-function [ mseVolaKalmanOut ] = getPredCoeffKalmanOut( uniqueDates, filteredDataCall, vola, k, l )
+function [ mseVolaKalmanOut, rmseVolaKalmanOut ] = getPredCoeffKalmanOut( uniqueDates, filteredDataCall, vola, k, l )
 %GETPREDCOEFFKALMANOUT evaluates the coefficients for the linear model to evaluate
 %the volatility surface using out-of-sample testing. 
 %   Therefore the function getPredCoeffKalman is used to evaluate the
@@ -10,6 +10,7 @@ function [ mseVolaKalmanOut ] = getPredCoeffKalmanOut( uniqueDates, filteredData
     % estimated volatility for each day j.
 
 mseVolaKalmanOut = zeros(k,1);
+rmseVolaKalmanOut = zeros(k,1);
 
 for j=1:k
 filteredDataCall.DayNb = [1:size(filteredDataCall,1)]';
@@ -49,6 +50,7 @@ coeffOut = getCoeff(model, filteredDataCall(startOut:stopOut,:));
 volaKalmanOut = evalVola(filteredDataCall(startPred:stopPred,:),muOut,model);
 
 mseVolaKalmanOut(j) = getMse(filteredDataCall.implVol(startPred:stopPred,:),volaKalmanOut);
+rmseVolaKalmanOut(j) = getRmse(filteredDataCall.implVol(startPred:stopPred,:),volaKalmanOut);
 
 end
 end

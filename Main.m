@@ -198,12 +198,15 @@ coeffKalman = getPredCoeffKalman(coeff,uniqueDates,filteredDataCall,vola);
 volaKalman = evalVola(filteredDataCall,coeffKalman,model);
 
 mseVolaKalman = getMse(filteredDataCall.implVol,volaKalman);
+rmseVolaKalman = getRmse(filteredDataCall.implVol,volaKalman);
 
 %% OUT OF SAMPLE TESTING:
 
-mseVolaKalmanOut = getPredCoeffKalmanOut(uniqueDates, filteredDataCall, vola, 10, 253);
+[mseVolaKalmanOut,rmseVolaKalmanOut] = getPredCoeffKalmanOut(uniqueDates, filteredDataCall, vola, 100, 759);
 
 mseVolaVARKalman = [mse(:,2),mseVolaKalmanOut];
+rmseVolaVARKalman = [rmse(:,2),rmseVolaKalmanOut];
+
 [~, smallerMod] = min(mseVolaVARKalman');
 bestModelVARKalman = mode(smallerMod);
 

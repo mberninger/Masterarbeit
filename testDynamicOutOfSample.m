@@ -1,7 +1,7 @@
 function [bestModelMSETest, bestModelARTest, bestModelVARTest, mse, rmse] = testDynamicOutOfSample( filteredDataCall, uniqueDates, k, l )
 % Here the out-of-sample tests for modelling the volatility surfaces are
 % made. 
-%   Therefore only the one year (l=253), three years (l= 759) or six years
+%   Therefore only three years (l= 759) or six years
 %   (l=1528) of the data is taken to evaluate the coefficients. Then the
 %   next day is predicted with three different models, the AR model, the
 %   VAR model and a model that always takes the last days coefficient as
