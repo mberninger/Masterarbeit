@@ -122,7 +122,7 @@ grid minor
 
 clear dataAll dataCall dataPut dataCallFiltered dataPerDayAll dayChangesAll implVolCall implVolPut k obsRange uniqueDatesAll
 
-%% Fitting the implied volatility surface
+%% Fitting the implied volatility surfaces
 %% in-sample test:
 % Table 5.1: in-sample test for all 5 models, evaluating the mean of R², the mean of
 % adj R², MSE, RMSE and the mean of the AIC in order to get best model
@@ -296,7 +296,7 @@ clear coeff3 coeff4 coeff5 dataPerDay day dayChanges model3 model4 model5 unique
 
 %% Delete variables after this chapter:
 clear freqOfBestModel freqOfBestModelFirst inSampleTesting outOfSampleTesting outOfSampleTestingDiminishedData outOfSampleTestingEnlargedData
-%% Modelling the Dynamics of the implied volatility surface
+%% Modelling the Dynamic of the implied volatility surfaces
 %% properties of the estimated coefficients:
 % model = [1,2,3,4,5];
 % coeff = getCoeff(model, filteredData);
@@ -412,7 +412,7 @@ plot(uniqueDates, predCoeffVAR)
 hold off
 
 
-%% KALMAN FILTER:
+%% APPLICATION OF THE KALMAN FILTER:
 %% in-sample test:
 % Figure 7.1: Course of the coefficients and estimated coefficients via Kalman
 load('coeff.mat')
@@ -450,7 +450,7 @@ outOfSampleAllKalman = [mean(mse(:,1)),std(mse(:,1)), min(mse(:,1)),max(mse(:,1)
     mean(rmseVolaKalmanOut(:,1)),std(rmseVolaKalmanOut(:,1)), min(rmseVolaKalmanOut(:,1)),max(rmseVolaKalmanOut(:,1));];
 outOfSampleAllKalman = table(outOfSampleAllKalman(:,1),outOfSampleAllKalman(:,2),outOfSampleAllKalman(:,3),outOfSampleAllKalman(:,4),'VariableNames',{'mean', 'standardDeviation','minimum','maximum'},'RowNames',{'AR_Mod_MSE';'AR_Mod_RMSE';'VAR_Mod_MSE';'VAR_Mod_RMSE';'Comp_Mod_MSE';'Comp_Mod_RMSE';'Kalman_MSE';'Kalman_RMSE'});
 
-%% robustness tests:
+%% robustness test:
 % Table 7.2: frequency of being the best model, 6 years, 100 rep
 nDates = 100;
 indexMSE = zeros(nDates,1);

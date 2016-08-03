@@ -1,6 +1,6 @@
 function [ rmse ] = getRmse( x, xref)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%GETRMSE evaluates the root mean squared error
+%   it is the square root of the mean squared error 
 
 rmse = sqrt(getMse(x, xref));
 
