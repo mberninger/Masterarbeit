@@ -1,4 +1,4 @@
-function [ bestModelOut ] = testBestModelAROut(coeffOut, predLength, filteredDataCall, startDay, model, uniqueDates)
+function [ bestModelOut, bestModelOutR ] = testBestModelAROut(coeffOut, predLength, filteredDataCall, startDay, model, uniqueDates)
 %TESTBESTMODELAROUT tests out-of-sample for all AR-models of order 1 to 5, which
 %number of lags is best. 
 %   Only a subsample of the data was chosen to calculated the coefficients
@@ -8,6 +8,7 @@ function [ bestModelOut ] = testBestModelAROut(coeffOut, predLength, filteredDat
 %   is the model that has the lowest mean squared error most often 
 
     mseVolaAROut = zeros(5,predLength);
+    rmseVolaAROut = zeros(5,predLength);
     for ii = 1:5;
         predCoeffAROut = getPredCoeffAROut(coeffOut, predLength, ii);
 
@@ -18,10 +19,13 @@ function [ bestModelOut ] = testBestModelAROut(coeffOut, predLength, filteredDat
     
             volaAR = evalVola(thisObs,predCoeffAROut(j,:),model);
             mseVolaAROut(ii,j) = getMse(volaAR,thisObs.implVol);
+            rmseVolaAROut(ii,j) = getRmse(volaAR,thisObs.implVol);
         end
     end
     
     [~, bestModelOutAll] = min(mseVolaAROut);
     bestModelOut = mode(bestModelOutAll);
+    [~, bestModelOutAllR] = min(rmseVolaAROut);
+    bestModelOutR = mode(bestModelOutAllR);
 end
 

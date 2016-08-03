@@ -1,4 +1,6 @@
-% THIS IS MY MAIN SCRIPT
+%% THIS IS MY MAIN SCRIPT
+% For the code of all tables and figures, see figuresAndTables.m
+
 clear;
 clc;
 close all;
@@ -31,115 +33,56 @@ implVolUpperBound = 0.5;
 filteredDataCall = getFilteredDataCall(data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound);
 filteredDataPut = getFilteredDataPut(data, timeToMaturityLowerBound, timeToMaturityUpperBound, mnyNessLowerBound, mnyNessUpperBound, optionPrice, implVolLowerBound, implVolUpperBound);
 
+% in these master thesis call and put options are examined together:
 filteredData = [filteredDataCall; filteredDataPut];
 filteredData = sortrows(filteredData,'Date','ascend');
-filteredDataCall = filteredData;
 
 clear timeToMaturityLowerBound timeToMaturityUpperBound mnyNessLowerBound mnyNessUpperBound optionPrice implVolLowerBound implVolUpperBound;
 
 %% evaluate the row number where day changes
 % get unique dates and row number, where day changes
-[uniqueDates, dataPerDay] = unique(filteredDataCall.Date);
-% [uniqueDatesPut, dataPerDayPut] = unique(filteredDataPut.Date);
+[uniqueDates, dataPerDay] = unique(filteredData.Date);
 
 % NOTE: old implementation skips observations for last date
 % attach value of (last index + 1) to dates
-dayChanges = [dataPerDay; size(filteredDataCall, 1)+1];
-% dayChangesPut = [dataPerDayPut; size(filteredDataPut, 1)+1];
+dayChanges = [dataPerDay; size(filteredData, 1)+1];
 
 clear dataPerDay dataPerDayPut;
 
-%% FITTING THE IMPLIED VOLATILITY SURFACES for call and put options
-%
-%% OUT OF SAMPLE TESTING:
-%% get the goodness of fit out-of-sample and AIC in-sample for all possible models, to find the one that fits best
-% choose percentage for out-of-sample data in first input variable
+%% FITTING THE IMPLIED VOLATILITY SURFACES for call and put options    
+%% IN SAMPLE TESTING:
+% in-sample test for all 5 models, evaluating the mean of R², the mean of
+% adj R², MSE, RMSE and the mean of the AIC in order to get best model
 allModels = [1,2,0,0,0;
     1,3,0,0,0;
     1,3,5,0,0;
     1,2,3,5,0;
     1,2,3,4,5];
+
+    % due to long calculations, some matrices are stored and loaded, their
+    % calculations are always included before the loading of the matrix
+% modelAIC = evalModelCriterion(allModels, filteredData);
+load('modelAICCallAndPut.mat');
+bestModelInSample = getBestInSampleModel( filteredData, allModels, modelAIC );
+
+%% OUT OF SAMPLE TESTING:
+%% get the goodness of fit out-of-sample for all possible models, to find the one that fits best
+% choose nRep, the number of repetitions and the percentage for
+% out-of-sample data in first input variable (e.g. 0.8)
 nRep = 100;
-[mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredDataCall);
-% [mseOutOfSamplePut, rmseOutOfSamplePut] = evalMseRmse(allModels, nRep, 0.8, uniqueDatesPut, filteredDataPut);
-% load('mseOutOfSample.mat');
-% load('rmseOutOfSample.mat');
-% load('mseOutOfSamplePut.mat');
-% load('rmseOutOfSamplePut.mat');
-modelAIC = evalModelCriterion(allModels, filteredDataCall);
-% modelAICPut = evalModelCriterion(allModels, filteredDataPut);
-% load('modelAIC.mat');
-% load('modelAICPut.mat');
 
-%% the different models are compared in order to find the bestModel
-[ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSample, uniqueDates, nRep);
-[ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSample, uniqueDates, nRep);
-[ ~, ~, allDaysAIC ] = getBestModel(modelAIC);
-
-% [ ~, ~, ~, ~, allDaysMSE ] = get3DBestModel(mseOutOfSamplePut, uniqueDatesPut, nRep);
-% [ ~, ~, ~, ~, allDaysRMSE ] = get3DBestModel(rmseOutOfSamplePut, uniqueDatesPut, nRep);
-% [ ~, ~, allDaysAIC ] = getBestModel(modelAICPut);
-
-% the different goodness of fit measures are compared for every day
-bestModelPerDay = table((1:size(uniqueDates,1))', allDaysMSE, allDaysRMSE, allDaysAIC, 'VariableNames', {'Days','MSE','RMSE','AIC'});
-diffBestModels = bestModelPerDay(bestModelPerDay.MSE ~= bestModelPerDay.RMSE | bestModelPerDay.MSE ~= bestModelPerDay.AIC, :);
-bestModelIs5 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 5, :);
-bestModelIs4 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 4, :);
-bestModelIs3 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 3, :);
-bestModelIs2 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 2, :);
-bestModelIs1 = bestModelPerDay(bestModelPerDay.MSE == bestModelPerDay.RMSE & bestModelPerDay.MSE == bestModelPerDay.AIC & bestModelPerDay.MSE == 1, :);
-clear allDaysMSE allDaysRMSE allDaysAIC;
-
-%% find coefficients for model; choose model coefficients: 
-% choose from possible explanatory variables: 1 = moneyness, 2 =
-% moneyness^2, 3 = timeToMaturity, 4 = timeToMaturity^2, 5 =
-% moneyness*timeToMaturity
-model3 = [1,3,5];
-coeff3 = getCoeff(model3, filteredDataCall);
-% coeff3Put = getCoeff(model3, filteredDataPut);
-model4 = [1,2,3,5];
-coeff4 = getCoeff(model4, filteredDataCall);
-% coeff4Put = getCoeff(model4, filteredDataPut);
-model5 = [1,2,3,4,5];
-coeff5 = getCoeff(model5, filteredDataCall);
-% coeff5Put = getCoeff(model5, filteredDataPut);
-
-%% plot volatility surface with estimated coefficients
-% choose the day in the first input variable
-% the boundarys for the moneyness and the time to maturity are the same as
-% chosen for filtering the data, so
-    % 0.8 < moneyness < 1.2
-    % 20 < timeToMaturity .*225 < 510
-    tag = 97;
-    plotSurface(tag,coeff3,model3,filteredDataCall,dayChanges);
-    plotSurface(tag,coeff4,model4,filteredDataCall,dayChanges);
-    plotSurface(tag,coeff5,model5,filteredDataCall,dayChanges);
+    % again, due to long calculations the matrices are also saved
+% [mseOutOfSample, rmseOutOfSample] = evalMseRmse(allModels, nRep, 0.8, uniqueDates, filteredData);
+load('mseOutOfSampleCallAndPut.mat');
+load('rmseOutOfSampleCallAndPut.mat');
     
-%     plotSurface(tag,coeff3Put,model3,filteredDataPut,dayChangesPut);
-%     plotSurface(tag,coeff4Put,model4,filteredDataPut,dayChangesPut);
-%     plotSurface(tag,coeff5Put,model5,filteredDataPut,dayChangesPut);
-    
-%% IN SAMPLE TESTING
-%% Goodness-of-fit:
-%   mean square error: 0 = perfect fit
-%   root mean squared error: 0 = perfect fit
-
-% evaluate volatility with modelled coefficients
-vola = evalVola(filteredDataCall, coeff5, model5 );
-volaPut = evalVola(filteredDataPut, coeff5Put, model5 );
-
-% test mean squared and root mean squared error evaluated and implied volatility 
-mse = getMse(vola,filteredDataCall.implVol);
-rmse = getRmse(vola,filteredDataCall.implVol);
-msePut = getMse(volaPut,filteredDataPut.implVol);
-rmsePut = getRmse(volaPut,filteredDataPut.implVol);
-    
-%% after in-sample and out-of-sample testing: model 5 is chosen:
+%% after in-sample and out-of-sample testing: model 5 is chosen for further calculations:
 model = [1,2,3,4,5];
-coeff = getCoeff(model, filteredDataCall);
-vola = evalVola(filteredDataCall, coeff, model);
-coeffPut = getCoeff(model, filteredDataPut);
-volaPut = evalVola(filteredDataPut, coeffPut, model );
+    % these coefficients are used very often and therefore are saved in a
+    % matrix:
+% coeff = getCoeff(model, filteredData);
+load('coeff.mat')
+vola = evalVola(filteredData, coeff, model);
 
 %% MODELLING THE DYNAMICS OF THE IMPLIED VOLATILITY SURFACES
 %% IN SAMPLE TESTING:
@@ -149,9 +92,9 @@ bestModelAR = testBestModelAR(coeff, 5);
 % lag 5 is best => AR(5) model is used
 predCoeffAR = getPredCoeffAR(coeff, bestModelAR);
 
-volaAR = evalVola(filteredDataCall,predCoeffAR,model);
-mseVolaAR = getMse(volaAR,filteredDataCall.implVol);
-rmseVolaAR = getRmse(volaAR,filteredDataCall.implVol);
+volaAR = evalVola(filteredData,predCoeffAR,model);
+mseVolaAR = getMse(volaAR,filteredData.implVol);
+rmseVolaAR = getRmse(volaAR,filteredData.implVol);
 
 %% Model 1: Vector autoregressive model:
 % test how many lags (1-5 are tested) are best when an VAR model is used:
@@ -159,9 +102,9 @@ bestModelVAR = testBestModelVAR(coeff, 5);
 % lag 3 is best => AR(3) model is used
 predCoeffVAR = getPredCoeffVAR(coeff, bestModelVAR);
 
-volaVAR = evalVola(filteredDataCall,predCoeffVAR,model);
-mseVolaVAR = getMse(volaVAR,filteredDataCall.implVol);
-rmseVolaVAR = getRmse(volaVAR,filteredDataCall.implVol);
+volaVAR = evalVola(filteredData,predCoeffVAR,model);
+mseVolaVAR = getMse(volaVAR,filteredData.implVol);
+rmseVolaVAR = getRmse(volaVAR,filteredData.implVol);
 
 % -> comparing mseVolaVAR and mseVolaAR shows that model 1 performs better
 % than model 0
@@ -169,40 +112,70 @@ rmseVolaVAR = getRmse(volaVAR,filteredDataCall.implVol);
 %% Model 2: coefficients of previous day are used for current day as a comparing model
 predCoeffMod2 = getPredCoeffMod2(coeff);
 
-volaMod2 = evalVola(filteredDataCall,predCoeffMod2,model);
-mseVolaMod2 = getMse(volaMod2,filteredDataCall.implVol);
-rmseVolaMod2 = getRmse(volaMod2,filteredDataCall.implVol);
+volaMod2 = evalVola(filteredData,predCoeffMod2,model);
+mseVolaMod2 = getMse(volaMod2,filteredData.implVol);
+rmseVolaMod2 = getRmse(volaMod2,filteredData.implVol);
 
 % -> VAR(3) model performs best in-sample
 
+clear bestModelAR bestModelVAR predCoeffAR predCoeffMod2 predCoeffVAR volaAR volaVAR
 %% OUT-OF-SAMPLE TESTING: for the AR-model, the VAR-model, model2 and the Kalman filter
 % Here the out-of-sample tests for modelling the volatility surfaces are
 % made. 
-%   Choose l, which is the number of days that are taken to calculate the
-%   coefficients in sample. Then the next day, l+1, is predicted.
-%   This is done k-times. For each time the estimation window for the
+%   Choose timeWindow, the number of days that are taken to calculate the
+%   coefficients in sample. Then the next day, timeWindow+1, is predicted.
+%   This is done nRep-times. For each time the estimation window for the
 %   out-of-sample window moves one day forward. Then the mean squared error
-%   for the predicted day is calculated. This leads to k mse values. In the
-%   end the model is chosen, which has the smalles mse most often.
+%   and the root mean squared error for the predicted day
+%   is calculated. This leads to nRep mse and nRep rmse values. In the
+%   end the model is chosen, which has the smallest mean, standard
+%   deviation, minimum and maximum (see table 6.7)
 
-[bestModelMSETest, bestModelARTest, bestModelVARTest, mse, rmse] = testDynamicOutOfSample(filteredDataCall, uniqueDates, 100, 1528);
+nRep = 100;
+timeWindow = 1528;
+
+    % due to long calculations these matrices are saved and can be loaded
+% [bestModelAROut, bestModelAROutR, bestModelVAROut, bestModelVAROutR] = getBestLagNb( filteredData, coeff, uniqueDates, nRep, timeWindow);
+load('bestModelAROut6years.mat')
+[~, modelChange] = unique(sort(bestModelAROut(:,1)));
+freqBestMSE = [modelChange(2)-modelChange(1),modelChange(3)-modelChange(2),modelChange(4)-modelChange(3),modelChange(5)-modelChange(4),length(bestModelAROut)+1-modelChange(5)];
+[~,bestModelAROutLagNb] = max(freqBestMSE);
+
+load('bestModelVAROut6years.mat')
+[~, modelChangeR] = unique(sort(bestModelVAROut(:,1)));
+freqBestMSER = [modelChangeR(2)-modelChangeR(1),modelChangeR(3)-modelChangeR(2),modelChangeR(4)-modelChangeR(3),modelChangeR(5)-modelChangeR(4),length(bestModelVAROut)+1-modelChangeR(5)];
+[~,bestModelVAROutLagNb] = max(freqBestMSER);
+
+clear bestModelAROut bestModelVAROut modelChange freqBestMSE modelChangeR freqBestMSER
+
+
+% after having found the best number of lags for the AR and the VAR-model,
+% they are applied in this function to evaluate the MSE and the RMSE:
+    % due to long calculations these matrices are saved and can be loaded
+[mse, rmse] = testDynamicOutOfSample(filteredData, coeff, uniqueDates, nRep, timeWindow, bestModelAROutLagNb, bestModelVAROutLagNb);
+% load('mseVolaAllMod6yearsOutNew.mat')
+% load('rmseVolaAllMod6yearsOutNew.mat')
+
 
 % -> The VAR(1) Model is better than the AR-Model and model 2, as it has
-% the smallest MSE most often
+% the smallest mean and standard deviation of the MSE and the RMSE values
 
 
 %% THE KALMAN FILTER MODEL FOR THE DYNAMIC OF THE VOLATILITY CURVE
 %% IN SAMPLE TESTING:
-coeffKalman = getPredCoeffKalman(coeff,uniqueDates,filteredDataCall,vola);
 
-volaKalman = evalVola(filteredDataCall,coeffKalman,model);
+coeffKalman = getPredCoeffKalman(coeff,uniqueDates,filteredData,vola);
 
-mseVolaKalman = getMse(filteredDataCall.implVol,volaKalman);
-rmseVolaKalman = getRmse(filteredDataCall.implVol,volaKalman);
+volaKalman = evalVola(filteredData,coeffKalman,model);
+
+mseVolaKalman = getMse(filteredData.implVol,volaKalman);
+rmseVolaKalman = getRmse(filteredData.implVol,volaKalman);
 
 %% OUT OF SAMPLE TESTING:
-
-[mseVolaKalmanOut,rmseVolaKalmanOut] = getPredCoeffKalmanOut(uniqueDates, filteredDataCall, vola, 100, 759);
+    % due to long calculations these matrices are saved and can be loaded
+% [mseVolaKalmanOut,rmseVolaKalmanOut] = getPredCoeffKalmanOut(uniqueDates, filteredData, coeff, vola, nRep, timeWindow);
+load('mseVolaKalman6yearsOutNew.mat')
+load('rmseVolaKalman6yearsOutNew.mat')
 
 mseVolaVARKalman = [mse(:,2),mseVolaKalmanOut];
 rmseVolaVARKalman = [rmse(:,2),rmseVolaKalmanOut];
@@ -210,4 +183,4 @@ rmseVolaVARKalman = [rmse(:,2),rmseVolaKalmanOut];
 [~, smallerMod] = min(mseVolaVARKalman');
 bestModelVARKalman = mode(smallerMod);
 
-% -> The Kalman filter is better than only using the VAR(1)-model
+% -> VAR(1)-model is better than the Kalman filter

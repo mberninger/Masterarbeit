@@ -1,4 +1,4 @@
-function [bestModelMSETest, bestModelARTest, bestModelVARTest, mse, rmse] = testDynamicOutOfSample( filteredDataCall, uniqueDates, k, l )
+function [mse, rmse] = testDynamicOutOfSample( filteredDataCall, coeff, uniqueDates, k, l, bestModelAROut, bestModelVAROut )
 % Here the out-of-sample tests for modelling the volatility surfaces are
 % made. 
 %   Therefore only three years (l= 759) or six years
@@ -7,9 +7,8 @@ function [bestModelMSETest, bestModelARTest, bestModelVARTest, mse, rmse] = test
 %   VAR model and a model that always takes the last days coefficient as
 %   the best prediction for the current day.
 
-bestModelAROut = zeros(k,1);
+
 mseVolaAROut = zeros(k,1);
-bestModelVAROut = zeros(k,1);
 mseVolaVAROut = zeros(k,1);
 mseVolaMod2Out = zeros(k,1);
 rmseVolaAROut = zeros(k,1);
@@ -21,26 +20,20 @@ for j=1:k
 %% OUT-OF-SAMPLE TESTING:
 
 filteredDataCall.DayNb = [1:size(filteredDataCall,1)]';
-dayVectorStart = filteredDataCall.DayNb(filteredDataCall.Date == uniqueDates(j),:);
-dayVectorEnd = filteredDataCall.DayNb(filteredDataCall.Date == uniqueDates(l-1+j),:);
 dayVectorPred = filteredDataCall.DayNb(filteredDataCall.Date == uniqueDates(l+j),:);
 
-startOut = dayVectorStart(1);
-stopOut = dayVectorEnd(end);
 startPred = dayVectorPred(1);
 stopPred = dayVectorPred(end);
-startDay = l+j;
 
 model = [1,2,3,4,5];
-coeffOut = getCoeff(model, filteredDataCall(startOut:stopOut,:));
+% coeffOut = getCoeff(model, filteredDataCall(startOut:stopOut,:));
+coeffOut = coeff(j:j+l-1,:);
 
 predLength = size(unique(filteredDataCall(startPred:stopPred,1)),1);
 
 %% Model 0: Autoregressive model
-% test out of sample, how many lags are best in AR model:
-bestModelAROut(j) = testBestModelAROut(coeffOut, predLength, filteredDataCall, startDay, model, uniqueDates);
-% model bestModelAROut(j) performs best => use AR(bestModelAROut(j)) model
-predCoeffAROut = getPredCoeffAROut(coeffOut, predLength, bestModelAROut(j));
+% model bestModelAROut performs best => use AR(bestModelAROut(j)) model
+predCoeffAROut = getPredCoeffAROut(coeffOut, predLength, bestModelAROut);
 
 volaAROut = evalVola(filteredDataCall(startPred:stopPred,:),predCoeffAROut,model);
 mseVolaAROut(j) = getMse(volaAROut,filteredDataCall.implVol(startPred:stopPred));
@@ -48,10 +41,9 @@ rmseVolaAROut(j) = getRmse(volaAROut,filteredDataCall.implVol(startPred:stopPred
 
 
 %% Model 1: Vector autoregressive model
-bestModelVAROut(j) = testBestModelVAROut(coeffOut, predLength, filteredDataCall, startDay, uniqueDates, model);
-% evaluate the parameters of the VAR(bestModelVAROut(j)) model, which models the dynamics of
+% evaluate the parameters of the VAR(bestModelVAROut) model, which models the dynamics of
 % the implied volatility surface:
-predCoeffVAROut = getPredCoeffVAROut(coeffOut, predLength, bestModelVAROut(j));
+predCoeffVAROut = getPredCoeffVAROut(coeffOut, predLength, bestModelVAROut);
 
 % use the predicted coefficients to evaluate the volatility for the next
 % day
@@ -76,9 +68,4 @@ end
 
 mse = [mseVolaAROut, mseVolaVAROut, mseVolaMod2Out];
 rmse = [rmseVolaAROut, rmseVolaVAROut, rmseVolaMod2Out];
-[~, numtest] = min(mse');
-bestModelMSETest = mode(numtest);
-
-bestModelARTest = mode(bestModelAROut);
-bestModelVARTest = mode(bestModelVAROut);
 end
